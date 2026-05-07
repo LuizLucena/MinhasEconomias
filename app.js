@@ -42,6 +42,7 @@ const state = {
     year: today.getFullYear(),
     selectedAccounts: new Set(),
     showPreviousBalance: true,   // toggle para exibir saldo anterior
+    accountFilterOpen: false,
   },
   pendingConfirm: null,        // fn to call on confirm
   pendingInstallmentEdit: null, // { transaction, mode: 'single'|'forward' }
@@ -430,7 +431,7 @@ function renderMonthLabel() {
 
 function renderAccountChips() {
   const container = document.getElementById('account-chips');
-  const { selectedAccounts } = state.ui;
+  const { selectedAccounts, accountFilterOpen } = state.ui;
   const activeAccounts = state.accounts.filter(acc => isActiveStatus(acc.status));
   container.innerHTML = '';
 
@@ -439,17 +440,84 @@ function renderAccountChips() {
     return;
   }
 
-  const labelEl = document.createElement('span');
-  labelEl.className = 'account-chip-label';
-  labelEl.textContent = 'Filtrar:';
-  container.appendChild(labelEl);
+  const selectedNames = activeAccounts
+    .filter(acc => selectedAccounts.has(acc.name))
+    .map(acc => acc.name);
+
+  const headerEl = document.createElement('div');
+  headerEl.className = 'account-filter-header';
+
+  const titleEl = document.createElement('span');
+  titleEl.className = 'account-filter-title';
+  titleEl.textContent = 'Filtro de contas';
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'account-filter-toggle';
+  toggleBtn.setAttribute('type', 'button');
+  toggleBtn.textContent = accountFilterOpen ? 'Ocultar' : 'Selecionar';
+  toggleBtn.addEventListener('click', () => {
+    state.ui.accountFilterOpen = !state.ui.accountFilterOpen;
+    renderAccountChips();
+  });
+
+  headerEl.appendChild(titleEl);
+  headerEl.appendChild(toggleBtn);
+  container.appendChild(headerEl);
+
+  const statusEl = document.createElement('div');
+  statusEl.className = 'account-filter-status';
+  if (selectedAccounts.size === 0) {
+    statusEl.textContent = 'Filtrando: todas as contas';
+  } else {
+    statusEl.textContent = `Filtrando (${selectedNames.length}): ${selectedNames.join(', ')}`;
+  }
+  container.appendChild(statusEl);
+
+  if (!accountFilterOpen) {
+    return;
+  }
+
+  const actionsEl = document.createElement('div');
+  actionsEl.className = 'account-filter-actions';
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'account-filter-clear';
+  clearBtn.setAttribute('type', 'button');
+  clearBtn.textContent = 'Mostrar todas';
+  clearBtn.disabled = selectedAccounts.size === 0;
+  clearBtn.addEventListener('click', () => {
+    selectedAccounts.clear();
+    renderAccountChips();
+    renderTransactionList();
+    renderSummary();
+  });
+
+  actionsEl.appendChild(clearBtn);
+  container.appendChild(actionsEl);
+
+  const listEl = document.createElement('div');
+  listEl.className = 'account-list';
 
   activeAccounts.forEach(acc => {
-    const chip = document.createElement('button');
-    chip.className = 'account-chip' + (selectedAccounts.has(acc.name) ? ' active' : '');
-    chip.textContent = acc.name;
-    chip.dataset.account = acc.name;
-    chip.addEventListener('click', () => {
+    const item = document.createElement('button');
+    const isActiveFilter = selectedAccounts.has(acc.name);
+    item.className = 'account-list-item' + (isActiveFilter ? ' active' : '');
+    item.dataset.account = acc.name;
+    item.setAttribute('type', 'button');
+    item.setAttribute('aria-pressed', isActiveFilter ? 'true' : 'false');
+
+    const checkEl = document.createElement('span');
+    checkEl.className = 'account-list-check';
+    checkEl.textContent = isActiveFilter ? '✓' : '';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'account-list-name';
+    nameEl.textContent = acc.name;
+
+    item.appendChild(checkEl);
+    item.appendChild(nameEl);
+
+    item.addEventListener('click', () => {
       if (selectedAccounts.has(acc.name)) {
         selectedAccounts.delete(acc.name);
       } else {
@@ -459,8 +527,11 @@ function renderAccountChips() {
       renderTransactionList();
       renderSummary();
     });
-    container.appendChild(chip);
+
+    listEl.appendChild(item);
   });
+
+  container.appendChild(listEl);
 }
 
 function renderSummary() {
