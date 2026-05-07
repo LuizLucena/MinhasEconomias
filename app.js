@@ -582,7 +582,7 @@ function renderOpeningBalanceItem(previousBalance) {
   const balanceClass = previousBalance >= 0 ? 'positive' : 'negative';
   el.className = 'opening-balance-item';
   el.innerHTML = `
-    <div class="opening-balance-label">Saldo acumulado anterior ao mês</div>
+    <div class="opening-balance-label">Saldo anterior</div>
     <div class="opening-balance-value ${balanceClass}">${formatCurrency(previousBalance)}</div>
   `;
   return el;
