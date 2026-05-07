@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Minhas Economias</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ====== SETUP SCREEN ====== -->
+  <div id="screen-setup" class="screen active">
+    <div class="centered-card">
+      <div class="logo">💰</div>
+      <h1>Minhas Economias</h1>
+      <p class="subtitle">Configuração inicial</p>
+
+      <div class="info-box">
+        <strong>Como configurar:</strong>
+        <ol>
+          <li>Acesse o <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+          <li>Crie um projeto e ative a <strong>Google Sheets API</strong></li>
+          <li>Em "Credenciais", crie um <strong>ID do cliente OAuth 2.0</strong> (tipo: Aplicativo da web)</li>
+          <li>Em "Origens JavaScript autorizadas", adicione a URL onde este arquivo está sendo servido (ex: <code>http://localhost:8080</code>)</li>
+          <li>Cole o ID do cliente abaixo</li>
+        </ol>
+        <p><strong>Nota:</strong> Para usar no celular, recomendamos hospedar no <a href="https://pages.github.com/" target="_blank">GitHub Pages</a> e usar a URL do repositório.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="input-client-id">Client ID do Google OAuth</label>
+        <input type="text" id="input-client-id" placeholder="xxxxxxxx.apps.googleusercontent.com" />
+      </div>
+      <div class="form-group">
+        <label for="input-sheet-id">ID da Planilha Google Sheets</label>
+        <input type="text" id="input-sheet-id" value="1Tq1KFbS-0pCw_KmJikH_z57LqQkYlKoS" />
+      </div>
+      <div class="form-group">
+        <label for="input-tab-transactions">Nome da aba de Transações</label>
+        <input type="text" id="input-tab-transactions" value="Transações" />
+      </div>
+      <div class="form-group">
+        <label for="input-tab-accounts">Nome da aba de Contas</label>
+        <input type="text" id="input-tab-accounts" value="Contas" />
+      </div>
+      <div class="form-group">
+        <label for="input-tab-categories">Nome da aba de Categorias</label>
+        <input type="text" id="input-tab-categories" value="Categorias" />
+      </div>
+      <button id="btn-save-setup" class="btn btn-primary btn-full">Salvar e Continuar</button>
+    </div>
+  </div>
+
+  <!-- ====== AUTH SCREEN ====== -->
+  <div id="screen-auth" class="screen">
+    <div class="centered-card">
+      <div class="logo">💰</div>
+      <h1>Minhas Economias</h1>
+      <p class="subtitle">Faça login para sincronizar com o Google Sheets</p>
+      <button id="btn-signin" class="btn btn-google btn-full">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Entrar com Google
+      </button>
+      <button id="btn-open-setup" class="btn btn-link">Alterar configurações</button>
+    </div>
+  </div>
+
+  <!-- ====== MAIN SCREEN ====== -->
+  <div id="screen-main" class="screen">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-title">
+        <span class="header-logo">💰</span>
+        <span>Minhas Economias</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-reload" class="icon-btn" title="Atualizar dados">↻</button>
+        <button id="btn-settings" class="icon-btn" title="Configurações">⚙</button>
+      </div>
+    </header>
+
+    <!-- Month navigation -->
+    <div class="month-nav">
+      <button id="btn-prev-month" class="icon-btn">‹</button>
+      <span id="month-label" class="month-label"></span>
+      <button id="btn-next-month" class="icon-btn">›</button>
+    </div>
+
+    <!-- Account filter -->
+    <div class="account-filter-section">
+      <div id="account-chips" class="account-chips">
+        <!-- Chips rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Summary card -->
+    <div class="summary-card">
+      <div class="summary-item income">
+        <div class="summary-label">Receitas</div>
+        <div id="summary-income" class="summary-value">R$ 0,00</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item expense">
+        <div class="summary-label">Despesas</div>
+        <div id="summary-expenses" class="summary-value">R$ 0,00</div>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-item balance">
+        <div class="summary-label">Saldo</div>
+        <div id="summary-balance" class="summary-value">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Transaction list -->
+    <div id="transaction-list" class="transaction-list">
+      <!-- Transactions rendered dynamically -->
+    </div>
+
+    <!-- FAB -->
+    <button id="btn-add" class="fab" title="Adicionar transação">+</button>
+
+  </div>
+
+  <!-- ====== TRANSACTION MODAL ====== -->
+  <div id="modal-transaction" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-transaction-title">Nova Transação</h2>
+        <button id="btn-modal-close" class="icon-btn">✕</button>
+      </div>
+
+      <!-- Type selector -->
+      <div class="type-selector">
+        <button class="type-btn active" data-type="despesa">Despesa</button>
+        <button class="type-btn" data-type="receita">Receita</button>
+        <button class="type-btn" data-type="transferencia">Transferência</button>
+      </div>
+
+      <form id="form-transaction" novalidate>
+        <div class="form-group">
+          <label for="f-description">Descrição <span class="char-count" id="desc-count">0/30</span></label>
+          <input type="text" id="f-description" maxlength="30" placeholder="Ex: Mercado, Salário..." required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="f-amount">Valor (R$)</label>
+            <input type="number" id="f-amount" min="0.01" step="0.01" placeholder="0,00" required />
+          </div>
+          <div class="form-group">
+            <label for="f-date">Data</label>
+            <input type="date" id="f-date" required />
+          </div>
+        </div>
+
+        <!-- Fields for Receita / Despesa -->
+        <div id="fields-normal">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="f-account">Conta</label>
+              <select id="f-account" required>
+                <option value="">Selecionar...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-category">Categoria</label>
+              <select id="f-category" required>
+                <option value="">Selecionar...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fields for Transferência -->
+        <div id="fields-transfer" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="f-source-account">Conta Origem</label>
+              <select id="f-source-account">
+                <option value="">Selecionar...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="f-dest-account">Conta Destino</label>
+              <select id="f-dest-account">
+                <option value="">Selecionar...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Installment section -->
+        <div class="installment-section">
+          <div class="form-group">
+            <label for="f-installment-type">Repetição</label>
+            <select id="f-installment-type">
+              <option value="none">Sem repetição</option>
+              <option value="monthly">Parcelamento Mensal</option>
+            </select>
+          </div>
+
+          <div id="installment-fields" style="display:none">
+            <div class="installment-hint">Iniciar na parcela X de Y</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="f-installment-start">Parcela inicial (X)</label>
+                <input type="number" id="f-installment-start" min="1" max="99" value="1" />
+              </div>
+              <div class="form-group">
+                <label for="f-installment-total">Total de parcelas (Y)</label>
+                <input type="number" id="f-installment-total" min="1" max="99" value="12" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="form-error" class="form-error" style="display:none"></div>
+
+        <div class="modal-actions">
+          <button type="button" id="btn-delete-transaction" class="btn btn-danger" style="display:none">Excluir</button>
+          <div class="modal-actions-right">
+            <button type="button" id="btn-cancel-transaction" class="btn btn-secondary">Cancelar</button>
+            <button type="submit" id="btn-save-transaction" class="btn btn-primary">Salvar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====== CONFIRM MODAL ====== -->
+  <div id="modal-confirm" class="modal-overlay" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2 id="confirm-title">Confirmar</h2>
+      </div>
+      <p id="confirm-message" class="confirm-message"></p>
+      <div class="modal-actions">
+        <button id="btn-confirm-cancel" class="btn btn-secondary">Cancelar</button>
+        <div class="modal-actions-right">
+          <button id="btn-confirm-ok" class="btn btn-danger">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== INSTALLMENT EDIT MODAL ====== -->
+  <div id="modal-installment-edit" class="modal-overlay" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Editar Parcelamento</h2>
+      </div>
+      <p class="confirm-message">Esta transação faz parte de um parcelamento. O que deseja editar?</p>
+      <div class="modal-actions modal-actions-col">
+        <button id="btn-edit-single" class="btn btn-secondary btn-full">Apenas esta parcela</button>
+        <button id="btn-edit-forward" class="btn btn-primary btn-full">Esta e todas as parcelas futuras</button>
+        <button id="btn-edit-cancel" class="btn btn-link btn-full">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== LOADING OVERLAY ====== -->
+  <div id="loading-overlay" class="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <p id="loading-message">Carregando...</p>
+  </div>
+
+  <!-- ====== TOAST ====== -->
+  <div id="toast" class="toast" style="display:none"></div>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <script src="app.js"></script>
+</body>
+</html>
