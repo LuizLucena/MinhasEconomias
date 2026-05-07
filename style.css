@@ -62,7 +62,8 @@ a {
 /* =========================================
    CENTERED CARD (Auth screen)
 ========================================= */
-#screen-auth {
+#screen-auth {  
+  display: none;
   align-items: flex-start;
   justify-content: center;
   padding: 24px 16px 60px;
