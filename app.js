@@ -484,6 +484,7 @@ function renderSummary() {
 function renderTransactionList() {
   const container = document.getElementById('transaction-list');
   const txs = getFilteredTransactions();
+  const previousBalance = getPreviousBalance();
 
   if (txs.length === 0) {
     container.innerHTML = `
@@ -535,9 +536,13 @@ function renderTransactionList() {
     if (items.length > 0) displayItems.push({ date: dateStr, items });
   });
 
-  let runningBalance = state.ui.showPreviousBalance ? getPreviousBalance() : 0;
+  let runningBalance = state.ui.showPreviousBalance ? previousBalance : 0;
 
   container.innerHTML = '';
+  if (state.ui.showPreviousBalance) {
+    container.appendChild(renderOpeningBalanceItem(previousBalance));
+  }
+
   displayItems.forEach(({ date, items }) => {
     const group = document.createElement('div');
     group.className = 'transaction-date-group';
@@ -570,6 +575,17 @@ function renderTransactionList() {
 
     container.appendChild(group);
   });
+}
+
+function renderOpeningBalanceItem(previousBalance) {
+  const el = document.createElement('div');
+  const balanceClass = previousBalance >= 0 ? 'positive' : 'negative';
+  el.className = 'opening-balance-item';
+  el.innerHTML = `
+    <div class="opening-balance-label">Saldo acumulado anterior ao mês</div>
+    <div class="opening-balance-value ${balanceClass}">${formatCurrency(previousBalance)}</div>
+  `;
+  return el;
 }
 
 function renderDailyBalanceItem(runningBalance, dayNet) {
