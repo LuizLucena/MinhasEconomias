@@ -803,6 +803,17 @@ a {
 .type-btn[data-type="receita"].active { color: var(--income); }
 .type-btn[data-type="transferencia"].active { color: var(--transfer); }
 
+.transfer-preview {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: var(--radius-sm);
+  color: #5b21b6;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+}
+
 /* INSTALLMENT */
 .installment-section {
   background: #f8fafc;

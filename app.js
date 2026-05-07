@@ -171,6 +171,8 @@ function findTransferPair(tx, allTx) {
     isTransferCategory(t.category) &&
     t.date === tx.date &&
     t.description === tx.description &&
+    tx.value * t.value < 0 &&
+    t.account !== tx.account &&
     Math.abs(Math.abs(parseValue(t.value)) - Math.abs(parseValue(tx.value))) < 0.005
   );
 }
@@ -668,6 +670,11 @@ function resetTransactionForm() {
   document.getElementById('form-error').style.display = 'none';
   document.getElementById('btn-delete-transaction').style.display = 'none';
   document.getElementById('desc-count').textContent = '0/30';
+  const transferPreviewEl = document.getElementById('transfer-preview');
+  if (transferPreviewEl) {
+    transferPreviewEl.style.display = 'none';
+    transferPreviewEl.textContent = '';
+  }
   setTransactionType('despesa');
   state.editingTransaction = null;
   state.editInstallmentMode = null;
@@ -680,6 +687,13 @@ function setTransactionType(type) {
   const isTransfer = type === 'transferencia';
   document.getElementById('fields-normal').style.display = isTransfer ? 'none' : 'block';
   document.getElementById('fields-transfer').style.display = isTransfer ? 'block' : 'none';
+
+  if (!isTransfer) {
+    const transferPreviewEl = document.getElementById('transfer-preview');
+    if (transferPreviewEl) {
+      transferPreviewEl.style.display = 'none';
+    }
+  }
 }
 
 function openAddTransaction() {
@@ -689,6 +703,17 @@ function openAddTransaction() {
 }
 
 function openEditTransaction(tx) {
+  if (isTransferCategory(tx.category)) {
+    // Resolve pair from all loaded transactions so edit works even with account filters applied.
+    const pair = findTransferPair(tx, state.transactions);
+    if (pair) {
+      const source = tx.value < 0 ? tx : pair;
+      const dest = tx.value > 0 ? tx : pair;
+      openEditTransfer(source, dest);
+      return;
+    }
+  }
+
   const installment = parseInstallment(tx.description);
 
   if (installment) {
@@ -787,6 +812,12 @@ function _openEditTransferForm(source, dest, installmentMode) {
 
   document.getElementById('f-source-account').value = source.account || '';
   document.getElementById('f-dest-account').value = dest.account || '';
+
+  const transferPreviewEl = document.getElementById('transfer-preview');
+  if (transferPreviewEl) {
+    transferPreviewEl.textContent = `Origem: ${source.account || '-'} -> Destino: ${dest.account || '-'}`;
+    transferPreviewEl.style.display = 'block';
+  }
 
   if (installment && installmentMode === 'forward') {
     document.getElementById('f-installment-type').value = 'monthly';
