@@ -138,6 +138,85 @@ function formatCurrencyShort(num) {
   }).format(abs);
 }
 
+function formatInputCurrencyFromCents(cents) {
+  const value = Math.max(0, Number(cents || 0)) / 100;
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function setAmountInputFromNumber(amount) {
+  const input = document.getElementById('f-amount');
+  const cents = Math.max(0, Math.round(Math.abs(Number(amount || 0)) * 100));
+  input.dataset.cents = String(cents);
+  input.value = formatInputCurrencyFromCents(cents);
+}
+
+function getAmountInputValue() {
+  const input = document.getElementById('f-amount');
+  const dataCents = parseInt(input.dataset.cents || '', 10);
+  if (!Number.isNaN(dataCents)) {
+    return dataCents / 100;
+  }
+  const digits = (input.value || '').replace(/\D/g, '');
+  const cents = parseInt(digits || '0', 10);
+  return cents / 100;
+}
+
+function setupAmountInputMask() {
+  const input = document.getElementById('f-amount');
+  if (!input) return;
+
+  const readCents = () => {
+    const fromData = parseInt(input.dataset.cents || '', 10);
+    if (!Number.isNaN(fromData)) return Math.max(0, fromData);
+    const digits = (input.value || '').replace(/\D/g, '');
+    return parseInt(digits || '0', 10);
+  };
+
+  const writeCents = cents => {
+    const safe = Math.max(0, cents);
+    input.dataset.cents = String(safe);
+    input.value = formatInputCurrencyFromCents(safe);
+  };
+
+  input.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (/^\d$/.test(e.key)) {
+      e.preventDefault();
+      writeCents(readCents() * 10 + Number(e.key));
+      return;
+    }
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      writeCents(Math.floor(readCents() / 10));
+      return;
+    }
+
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      writeCents(0);
+      return;
+    }
+
+    if (['Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+      return;
+    }
+
+    e.preventDefault();
+  });
+
+  input.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = e.clipboardData ? e.clipboardData.getData('text') : '';
+    const digits = text.replace(/\D/g, '');
+    writeCents(parseInt(digits || '0', 10));
+  });
+}
+
 // =============================================
 // UTILITY: Installment helpers
 // =============================================
@@ -749,6 +828,8 @@ function populateSelects() {
 
 function resetTransactionForm() {
   document.getElementById('form-transaction').reset();
+  document.getElementById('f-amount').value = '';
+  delete document.getElementById('f-amount').dataset.cents;
   document.getElementById('f-date').value = formatDateInput(today);
   document.getElementById('f-installment-type').value = 'none';
   document.getElementById('installment-fields').style.display = 'none';
@@ -833,7 +914,7 @@ function _openEditForm(tx, installmentMode) {
   const baseDesc = installment ? installment.base : tx.description;
   document.getElementById('f-description').value = baseDesc;
   document.getElementById('desc-count').textContent = `${baseDesc.length}/30`;
-  document.getElementById('f-amount').value = Math.abs(tx.value).toFixed(2);
+  setAmountInputFromNumber(Math.abs(tx.value));
 
   // Convert date DD/MM/YYYY → YYYY-MM-DD for input
   const d = parseDate(tx.date);
@@ -892,7 +973,7 @@ function _openEditTransferForm(source, dest, installmentMode) {
   const baseDesc = installment ? installment.base : source.description;
   document.getElementById('f-description').value = baseDesc;
   document.getElementById('desc-count').textContent = `${baseDesc.length}/30`;
-  document.getElementById('f-amount').value = Math.abs(source.value).toFixed(2);
+  setAmountInputFromNumber(Math.abs(source.value));
 
   const d = parseDate(source.date);
   if (d) document.getElementById('f-date').value = formatDateInput(d);
@@ -932,11 +1013,11 @@ function getCurrentType() {
 
 function validateForm(type) {
   const desc = document.getElementById('f-description').value.trim();
-  const amountRaw = document.getElementById('f-amount').value;
+  const amount = getAmountInputValue();
   const date = document.getElementById('f-date').value;
 
   if (!desc) return 'Informe a descrição.';
-  if (!amountRaw || parseFloat(amountRaw) <= 0) return 'Informe um valor válido.';
+  if (amount <= 0) return 'Informe um valor válido.';
   if (!date) return 'Informe a data.';
 
   if (type === 'transferencia') {
@@ -979,7 +1060,7 @@ async function handleSaveTransaction(e) {
   errorEl.style.display = 'none';
 
   const desc = document.getElementById('f-description').value.trim();
-  const amount = parseFloat(document.getElementById('f-amount').value);
+  const amount = getAmountInputValue();
   const dateInput = document.getElementById('f-date').value;
   const dateSheet = inputDateToSheet(dateInput);
   const installmentType = document.getElementById('f-installment-type').value;
@@ -1401,6 +1482,8 @@ function signIn() {
 // EVENT LISTENERS
 // =============================================
 function bindEvents() {
+  setupAmountInputMask();
+
   // Auth screen
   document.getElementById('btn-signin').addEventListener('click', signIn);
 
