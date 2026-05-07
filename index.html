@@ -243,7 +243,7 @@
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(err => {
+      navigator.serviceWorker.register('/MinhasEconomias/sw.js', { scope: '/MinhasEconomias/' }).catch(err => {
         console.log('Service Worker registration failed:', err);
       });
     }

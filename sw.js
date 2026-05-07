@@ -1,12 +1,12 @@
 // Service Worker for Minhas Economias PWA
-const CACHE_NAME = 'minhas-economias-v1';
+const CACHE_NAME = 'minhas-economias-v3';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/icon.svg',
-  '/manifest.json'
+  '/MinhasEconomias/',
+  '/MinhasEconomias/index.html',
+  '/MinhasEconomias/style.css',
+  '/MinhasEconomias/app.js',
+  '/MinhasEconomias/icon.svg',
+  '/MinhasEconomias/manifest.json'
 ];
 
 // Install event - cache files
@@ -53,31 +53,47 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+  const isAppShell = requestUrl.origin === self.location.origin &&
+    requestUrl.pathname.startsWith('/MinhasEconomias/');
+
+  if (isAppShell) {
+    // Network-first prevents stale JS/CSS on mobile while keeping offline fallback.
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then(cached => cached || new Response('Offline - unable to load resource'));
+        })
+    );
+    return;
+  }
+
+  // Cache-first for other static resources
   event.respondWith(
     caches.match(event.request).then(response => {
-      // Return cached response if available
-      if (response) {
-        return response;
-      }
+      if (response) return response;
 
-      // Otherwise fetch from network
-      return fetch(event.request).then(response => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+      return fetch(event.request).then(networkResponse => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
         }
 
-        // Cache the response for future use
-        const responseToCache = response.clone();
+        const responseToCache = networkResponse.clone();
         caches.open(CACHE_NAME).then(cache => {
           cache.put(event.request, responseToCache);
         });
 
-        return response;
-      }).catch(() => {
-        // Return a fallback response if network fails
-        return new Response('Offline - unable to load resource');
-      });
+        return networkResponse;
+      }).catch(() => new Response('Offline - unable to load resource'));
     })
   );
 });

@@ -572,6 +572,52 @@ a {
 .transaction-item.expense .transaction-amount { color: var(--expense); }
 .transaction-item.transfer .transaction-amount { color: var(--transfer); }
 
+.daily-balance-item {
+  background: #eef2ff;
+  border: 1px dashed #c7d2fe;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin: 2px 2px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.daily-balance-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.daily-balance-values {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.daily-net {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.daily-total {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.daily-net.positive,
+.daily-total.positive {
+  color: var(--income);
+}
+
+.daily-net.negative,
+.daily-total.negative {
+  color: var(--expense);
+}
+
 .empty-state {
   text-align: center;
   padding: 60px 20px;

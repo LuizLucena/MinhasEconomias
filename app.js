@@ -533,6 +533,8 @@ function renderTransactionList() {
     if (items.length > 0) displayItems.push({ date: dateStr, items });
   });
 
+  let runningBalance = state.ui.showPreviousBalance ? getPreviousBalance() : 0;
+
   container.innerHTML = '';
   displayItems.forEach(({ date, items }) => {
     const group = document.createElement('div');
@@ -553,8 +555,34 @@ function renderTransactionList() {
       }
     });
 
+    const dayNet = items.reduce((sum, item) => {
+      if (item.type === 'transfer') {
+        // Transfer pair net effect should be zero in overall balance.
+        return sum + item.source.value + item.dest.value;
+      }
+      return sum + item.tx.value;
+    }, 0);
+
+    runningBalance += dayNet;
+    group.appendChild(renderDailyBalanceItem(runningBalance, dayNet));
+
     container.appendChild(group);
   });
+}
+
+function renderDailyBalanceItem(runningBalance, dayNet) {
+  const el = document.createElement('div');
+  const netClass = dayNet >= 0 ? 'positive' : 'negative';
+  const balanceClass = runningBalance >= 0 ? 'positive' : 'negative';
+  el.className = 'daily-balance-item';
+  el.innerHTML = `
+    <div class="daily-balance-label">Saldo acumulado</div>
+    <div class="daily-balance-values">
+      <span class="daily-net ${netClass}">${formatCurrencyShort(dayNet)}</span>
+      <span class="daily-total ${balanceClass}">${formatCurrency(runningBalance)}</span>
+    </div>
+  `;
+  return el;
 }
 
 function renderTransactionItem(tx) {

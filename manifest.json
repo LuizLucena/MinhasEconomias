@@ -2,8 +2,8 @@
   "name": "Minhas Economias",
   "short_name": "Economias",
   "description": "Gerenciador de finanças pessoais com sincronização ao Google Sheets",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/MinhasEconomias/",
+  "scope": "/MinhasEconomias/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#2d5f4f",
@@ -60,7 +60,7 @@
       "name": "Adicionar Transação",
       "short_name": "Adicionar",
       "description": "Adicionar uma nova transação",
-      "url": "/?action=add",
+      "url": "/MinhasEconomias/?action=add",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
