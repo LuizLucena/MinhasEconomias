@@ -60,11 +60,9 @@ a {
 }
 
 /* =========================================
-   CENTERED CARD (Setup & Auth screens)
+   CENTERED CARD (Auth screen)
 ========================================= */
-#screen-setup,
 #screen-auth {
-  display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 24px 16px 60px;
@@ -72,7 +70,6 @@ a {
   min-height: 100vh;
 }
 
-#screen-setup.active,
 #screen-auth.active {
   display: flex;
 }
@@ -312,7 +309,6 @@ a {
    MAIN SCREEN LAYOUT
 ========================================= */
 #screen-main {
-  display: flex;
   flex-direction: column;
   min-height: 100vh;
   padding-bottom: 80px;
