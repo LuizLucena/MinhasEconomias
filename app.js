@@ -107,6 +107,19 @@ function parseValue(val) {
   return isNeg ? -Math.abs(num) : num;
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isActiveStatus(value) {
+  const status = normalizeText(value);
+  return status === 'ativo' || status.startsWith('ativo ');
+}
+
 function formatCurrency(num) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -264,7 +277,7 @@ async function loadAccounts() {
   const result = await sheetsGet(`${tabAccounts}!A:C`);
   const rows = (result.values || []).slice(1); // skip header
   state.accounts = rows
-    .filter(r => r[2] && r[2].trim().toLowerCase() === 'ativo')
+    .filter(r => isActiveStatus(r[2]))
     .map(r => ({
       name: (r[0] || '').trim(),
       total: parseValue(r[1]),
@@ -278,7 +291,7 @@ async function loadCategories() {
   const result = await sheetsGet(`${tabCategories}!A:C`);
   const rows = (result.values || []).slice(1);
   state.categories = rows
-    .filter(r => r[2] && r[2].trim().toLowerCase() === 'ativo')
+    .filter(r => isActiveStatus(r[2]))
     .map(r => ({
       name: (r[0] || '').trim(),
       total: parseValue(r[1]),
@@ -382,9 +395,10 @@ function renderMonthLabel() {
 function renderAccountChips() {
   const container = document.getElementById('account-chips');
   const { selectedAccounts } = state.ui;
+  const activeAccounts = state.accounts.filter(acc => isActiveStatus(acc.status));
   container.innerHTML = '';
 
-  if (state.accounts.length === 0) {
+  if (activeAccounts.length === 0) {
     container.innerHTML = '<span class="account-chip-label">Sem contas ativas</span>';
     return;
   }
@@ -394,7 +408,7 @@ function renderAccountChips() {
   labelEl.textContent = 'Filtrar:';
   container.appendChild(labelEl);
 
-  state.accounts.forEach(acc => {
+  activeAccounts.forEach(acc => {
     const chip = document.createElement('button');
     chip.className = 'account-chip' + (selectedAccounts.has(acc.name) ? ' active' : '');
     chip.textContent = acc.name;
@@ -545,12 +559,15 @@ function escHtml(str) {
 // MODAL: TRANSACTION FORM
 // =============================================
 function populateSelects() {
+  const activeAccounts = state.accounts.filter(a => isActiveStatus(a.status));
+  const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
+
   const accountSelects = ['f-account', 'f-source-account', 'f-dest-account'];
   accountSelects.forEach(id => {
     const sel = document.getElementById(id);
     const current = sel.value;
     sel.innerHTML = '<option value="">Selecionar...</option>';
-    state.accounts.forEach(a => {
+    activeAccounts.forEach(a => {
       const opt = document.createElement('option');
       opt.value = a.name;
       opt.textContent = a.name;
@@ -562,7 +579,7 @@ function populateSelects() {
   const catSel = document.getElementById('f-category');
   const currentCat = catSel.value;
   catSel.innerHTML = '<option value="">Selecionar...</option>';
-  state.categories.forEach(c => {
+  activeCategories.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.name;
     opt.textContent = c.name;
