@@ -1,0 +1,25 @@
+<svg viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#2d5f4f" rx="45"/>
+  
+  <!-- Coin 1 -->
+  <circle cx="60" cy="70" r="35" fill="#ffd700"/>
+  <circle cx="60" cy="70" r="33" fill="#ffed4e"/>
+  <circle cx="60" cy="70" r="28" fill="#ffd700"/>
+  <text x="60" y="80" font-size="40" font-weight="bold" fill="#8b6914" text-anchor="middle">$</text>
+  <ellipse cx="60" cy="68" rx="32" ry="8" fill="none" stroke="#8b6914" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Coin 2 -->
+  <circle cx="132" cy="100" r="40" fill="#ffc107"/>
+  <circle cx="132" cy="100" r="38" fill="#ffeb3b"/>
+  <circle cx="132" cy="100" r="32" fill="#ffc107"/>
+  <text x="132" y="113" font-size="45" font-weight="bold" fill="#7a5c0a" text-anchor="middle">R$</text>
+  <ellipse cx="132" cy="97" rx="37" ry="9" fill="none" stroke="#7a5c0a" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Arrow up (growth indicator) -->
+  <path d="M 96 140 L 96 160 M 85 150 L 96 140 L 107 150" stroke="#4caf50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Glow effect -->
+  <circle cx="60" cy="70" r="35" fill="none" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <circle cx="132" cy="100" r="40" fill="none" stroke="#fff" stroke-width="2" opacity="0.2"/>
+</svg>

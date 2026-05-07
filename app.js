@@ -41,6 +41,7 @@ const state = {
     month: today.getMonth() + 1,  // 1-12
     year: today.getFullYear(),
     selectedAccounts: new Set(),
+    showPreviousBalance: true,   // toggle para exibir saldo anterior
   },
   pendingConfirm: null,        // fn to call on confirm
   pendingInstallmentEdit: null, // { transaction, mode: 'single'|'forward' }
@@ -276,40 +277,28 @@ async function loadAccounts() {
   const { tabAccounts } = state.config;
   const result = await sheetsGet(`${tabAccounts}!A:C`);
   const rows = (result.values || []).slice(1); // skip header
-  console.log('Raw account rows from sheet:', rows);
   state.accounts = rows
-    .filter(r => {
-      const isActive = isActiveStatus(r[2]);
-      console.log(`Account "${r[0]}" has status "${r[2]}" → isActive=${isActive}`);
-      return isActive;
-    })
+    .filter(r => isActiveStatus(r[2]))
     .map(r => ({
       name: (r[0] || '').trim(),
       total: parseValue(r[1]),
       status: (r[2] || '').trim(),
     }))
     .filter(a => a.name);
-  console.log('Filtered state.accounts:', state.accounts);
 }
 
 async function loadCategories() {
   const { tabCategories } = state.config;
   const result = await sheetsGet(`${tabCategories}!A:C`);
   const rows = (result.values || []).slice(1);
-  console.log('Raw category rows from sheet:', rows);
   state.categories = rows
-    .filter(r => {
-      const isActive = isActiveStatus(r[2]);
-      console.log(`Category "${r[0]}" has status "${r[2]}" → isActive=${isActive}`);
-      return isActive;
-    })
+    .filter(r => isActiveStatus(r[2]))
     .map(r => ({
       name: (r[0] || '').trim(),
       total: parseValue(r[1]),
       status: (r[2] || '').trim(),
     }))
     .filter(c => c.name);
-  console.log('Filtered state.categories:', state.categories);
 }
 
 async function loadAllTransactions() {
@@ -353,6 +342,39 @@ function getFilteredTransactions() {
     if (selectedAccounts.size > 0 && !selectedAccounts.has(t.account)) return false;
     return true;
   });
+}
+
+function getPreviousBalance() {
+  // Calcula saldo até o fim do mês anterior, respeitando filtros de contas
+  const { month, year, selectedAccounts } = state.ui;
+  
+  // Mês anterior
+  let prevMonth = month - 1;
+  let prevYear = year;
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear--;
+  }
+  
+  // Filtra todas as transações até fim do mês anterior
+  let previousBalance = 0;
+  state.transactions.forEach(t => {
+    const d = parseDate(t.date);
+    if (!d) return;
+    
+    // Verifica se é antes do mês atual
+    const isBeforeCurrent = d.getFullYear() < year || 
+      (d.getFullYear() === year && d.getMonth() + 1 < month);
+    
+    if (!isBeforeCurrent) return;
+    
+    // Aplica filtro de contas
+    if (selectedAccounts.size > 0 && !selectedAccounts.has(t.account)) return;
+    
+    previousBalance += t.value;
+  });
+  
+  return previousBalance;
 }
 
 function calculateSummary(transactions) {
@@ -408,8 +430,6 @@ function renderAccountChips() {
   const container = document.getElementById('account-chips');
   const { selectedAccounts } = state.ui;
   const activeAccounts = state.accounts.filter(acc => isActiveStatus(acc.status));
-  console.log('renderAccountChips - state.accounts:', state.accounts);
-  console.log('renderAccountChips - activeAccounts after filter:', activeAccounts);
   container.innerHTML = '';
 
   if (activeAccounts.length === 0) {
@@ -446,9 +466,17 @@ function renderSummary() {
   const { income, expenses, balance } = calculateSummary(txs);
   document.getElementById('summary-income').textContent = formatCurrency(income);
   document.getElementById('summary-expenses').textContent = formatCurrency(expenses);
+  
   const balanceEl = document.getElementById('summary-balance');
-  balanceEl.textContent = formatCurrency(balance);
-  balanceEl.style.color = balance >= 0 ? 'var(--income)' : 'var(--expense)';
+  let displayBalance = balance;
+  
+  if (state.ui.showPreviousBalance) {
+    const prevBalance = getPreviousBalance();
+    displayBalance = prevBalance + balance;
+  }
+  
+  balanceEl.textContent = formatCurrency(displayBalance);
+  balanceEl.style.color = displayBalance >= 0 ? 'var(--income)' : 'var(--expense)';
 }
 
 function renderTransactionList() {
@@ -575,10 +603,6 @@ function escHtml(str) {
 function populateSelects() {
   const activeAccounts = state.accounts.filter(a => isActiveStatus(a.status));
   const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
-  console.log('populateSelects - state.accounts:', state.accounts);
-  console.log('populateSelects - activeAccounts:', activeAccounts);
-  console.log('populateSelects - state.categories:', state.categories);
-  console.log('populateSelects - activeCategories:', activeCategories);
 
   const accountSelects = ['f-account', 'f-source-account', 'f-dest-account'];
   accountSelects.forEach(id => {
@@ -1257,6 +1281,13 @@ function bindEvents() {
     loadAll('Atualizando dados...');
   });
 
+  document.getElementById('btn-toggle-prev-balance').addEventListener('click', () => {
+    state.ui.showPreviousBalance = !state.ui.showPreviousBalance;
+    renderSummary();
+    const btn = document.getElementById('btn-toggle-prev-balance');
+    btn.style.opacity = state.ui.showPreviousBalance ? '1' : '0.5';
+  });
+
   document.getElementById('btn-add').addEventListener('click', () => {
     populateSelects();
     openAddTransaction();
@@ -1341,6 +1372,12 @@ function bindEvents() {
       el.value = el.value.replace(/[^0-9]/g, '').substring(0, 2);
     });
   });
+
+  // Initialize previous balance button style
+  const btnPrevBalance = document.getElementById('btn-toggle-prev-balance');
+  if (btnPrevBalance) {
+    btnPrevBalance.style.opacity = state.ui.showPreviousBalance ? '1' : '0.5';
+  }
 }
 
 // =============================================

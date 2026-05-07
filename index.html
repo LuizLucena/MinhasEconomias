@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#2d5f4f" />
+  <meta name="description" content="Gerenciador de finanças pessoais com sincronização ao Google Sheets" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Economias" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <title>Minhas Economias</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -31,6 +39,7 @@
         <span>Minhas Economias</span>
       </div>
       <div class="header-actions">
+        <button id="btn-toggle-prev-balance" class="icon-btn" title="Mostrar/ocultar saldo anterior">∑</button>
         <button id="btn-reload" class="icon-btn" title="Atualizar dados">↻</button>
       </div>
     </header>
@@ -230,6 +239,16 @@
 
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client"></script>
+  
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => {
+        console.log('Service Worker registration failed:', err);
+      });
+    }
+  </script>
+  
   <script src="app.js"></script>
 </body>
 </html>
