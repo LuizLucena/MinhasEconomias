@@ -350,6 +350,15 @@ a {
   gap: 4px;
 }
 
+/* FROZEN HEADER */
+.frozen-header {
+  position: sticky;
+  top: 48px;
+  z-index: 45;
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
 /* MONTH NAV */
 .month-nav {
   background: var(--primary-dark);
@@ -422,7 +431,7 @@ a {
 .summary-card {
   display: flex;
   background: var(--card);
-  margin: 12px;
+  margin: 0 12px 12px;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;

@@ -35,37 +35,42 @@
       </div>
     </header>
 
-    <!-- Month navigation -->
-    <div class="month-nav">
-      <button id="btn-prev-month" class="icon-btn">‹</button>
-      <span id="month-label" class="month-label"></span>
-      <button id="btn-next-month" class="icon-btn">›</button>
-    </div>
+    <!-- Frozen top bar: month nav + filters + summary -->
+    <div class="frozen-header">
 
-    <!-- Account filter -->
-    <div class="account-filter-section">
-      <div id="account-chips" class="account-chips">
-        <!-- Chips rendered dynamically -->
+      <!-- Month navigation -->
+      <div class="month-nav">
+        <button id="btn-prev-month" class="icon-btn">‹</button>
+        <span id="month-label" class="month-label"></span>
+        <button id="btn-next-month" class="icon-btn">›</button>
       </div>
-    </div>
 
-    <!-- Summary card -->
-    <div class="summary-card">
-      <div class="summary-item income">
-        <div class="summary-label">Receitas</div>
-        <div id="summary-income" class="summary-value">R$ 0,00</div>
+      <!-- Account filter -->
+      <div class="account-filter-section">
+        <div id="account-chips" class="account-chips">
+          <!-- Chips rendered dynamically -->
+        </div>
       </div>
-      <div class="summary-divider"></div>
-      <div class="summary-item expense">
-        <div class="summary-label">Despesas</div>
-        <div id="summary-expenses" class="summary-value">R$ 0,00</div>
+
+      <!-- Summary card -->
+      <div class="summary-card">
+        <div class="summary-item income">
+          <div class="summary-label">Receitas</div>
+          <div id="summary-income" class="summary-value">R$ 0,00</div>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-item expense">
+          <div class="summary-label">Despesas</div>
+          <div id="summary-expenses" class="summary-value">R$ 0,00</div>
+        </div>
+        <div class="summary-divider"></div>
+        <div class="summary-item balance">
+          <div class="summary-label">Saldo</div>
+          <div id="summary-balance" class="summary-value">R$ 0,00</div>
+        </div>
       </div>
-      <div class="summary-divider"></div>
-      <div class="summary-item balance">
-        <div class="summary-label">Saldo</div>
-        <div id="summary-balance" class="summary-value">R$ 0,00</div>
-      </div>
-    </div>
+
+    </div><!-- /frozen-header -->
 
     <!-- Transaction list -->
     <div id="transaction-list" class="transaction-list">
