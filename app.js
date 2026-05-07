@@ -439,17 +439,64 @@ function renderAccountChips() {
     return;
   }
 
-  const labelEl = document.createElement('span');
-  labelEl.className = 'account-chip-label';
-  labelEl.textContent = 'Filtrar:';
-  container.appendChild(labelEl);
+  const selectedNames = activeAccounts
+    .filter(acc => selectedAccounts.has(acc.name))
+    .map(acc => acc.name);
+
+  const headerEl = document.createElement('div');
+  headerEl.className = 'account-filter-header';
+
+  const titleEl = document.createElement('span');
+  titleEl.className = 'account-filter-title';
+  titleEl.textContent = 'Contas';
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'account-filter-clear';
+  clearBtn.textContent = 'Mostrar todas';
+  clearBtn.disabled = selectedAccounts.size === 0;
+  clearBtn.addEventListener('click', () => {
+    selectedAccounts.clear();
+    renderAccountChips();
+    renderTransactionList();
+    renderSummary();
+  });
+
+  headerEl.appendChild(titleEl);
+  headerEl.appendChild(clearBtn);
+  container.appendChild(headerEl);
+
+  const statusEl = document.createElement('div');
+  statusEl.className = 'account-filter-status';
+  if (selectedAccounts.size === 0) {
+    statusEl.textContent = 'Filtrando: todas as contas';
+  } else {
+    statusEl.textContent = `Filtrando (${selectedNames.length}): ${selectedNames.join(', ')}`;
+  }
+  container.appendChild(statusEl);
+
+  const listEl = document.createElement('div');
+  listEl.className = 'account-list';
 
   activeAccounts.forEach(acc => {
-    const chip = document.createElement('button');
-    chip.className = 'account-chip' + (selectedAccounts.has(acc.name) ? ' active' : '');
-    chip.textContent = acc.name;
-    chip.dataset.account = acc.name;
-    chip.addEventListener('click', () => {
+    const item = document.createElement('button');
+    const isActiveFilter = selectedAccounts.has(acc.name);
+    item.className = 'account-list-item' + (isActiveFilter ? ' active' : '');
+    item.dataset.account = acc.name;
+    item.setAttribute('type', 'button');
+    item.setAttribute('aria-pressed', isActiveFilter ? 'true' : 'false');
+
+    const checkEl = document.createElement('span');
+    checkEl.className = 'account-list-check';
+    checkEl.textContent = isActiveFilter ? '✓' : '';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'account-list-name';
+    nameEl.textContent = acc.name;
+
+    item.appendChild(checkEl);
+    item.appendChild(nameEl);
+
+    item.addEventListener('click', () => {
       if (selectedAccounts.has(acc.name)) {
         selectedAccounts.delete(acc.name);
       } else {
@@ -459,8 +506,11 @@ function renderAccountChips() {
       renderTransactionList();
       renderSummary();
     });
-    container.appendChild(chip);
+
+    listEl.appendChild(item);
   });
+
+  container.appendChild(listEl);
 }
 
 function renderSummary() {
