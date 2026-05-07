@@ -276,28 +276,40 @@ async function loadAccounts() {
   const { tabAccounts } = state.config;
   const result = await sheetsGet(`${tabAccounts}!A:C`);
   const rows = (result.values || []).slice(1); // skip header
+  console.log('Raw account rows from sheet:', rows);
   state.accounts = rows
-    .filter(r => isActiveStatus(r[2]))
+    .filter(r => {
+      const isActive = isActiveStatus(r[2]);
+      console.log(`Account "${r[0]}" has status "${r[2]}" → isActive=${isActive}`);
+      return isActive;
+    })
     .map(r => ({
       name: (r[0] || '').trim(),
       total: parseValue(r[1]),
       status: (r[2] || '').trim(),
     }))
     .filter(a => a.name);
+  console.log('Filtered state.accounts:', state.accounts);
 }
 
 async function loadCategories() {
   const { tabCategories } = state.config;
   const result = await sheetsGet(`${tabCategories}!A:C`);
   const rows = (result.values || []).slice(1);
+  console.log('Raw category rows from sheet:', rows);
   state.categories = rows
-    .filter(r => isActiveStatus(r[2]))
+    .filter(r => {
+      const isActive = isActiveStatus(r[2]);
+      console.log(`Category "${r[0]}" has status "${r[2]}" → isActive=${isActive}`);
+      return isActive;
+    })
     .map(r => ({
       name: (r[0] || '').trim(),
       total: parseValue(r[1]),
       status: (r[2] || '').trim(),
     }))
     .filter(c => c.name);
+  console.log('Filtered state.categories:', state.categories);
 }
 
 async function loadAllTransactions() {
@@ -396,6 +408,8 @@ function renderAccountChips() {
   const container = document.getElementById('account-chips');
   const { selectedAccounts } = state.ui;
   const activeAccounts = state.accounts.filter(acc => isActiveStatus(acc.status));
+  console.log('renderAccountChips - state.accounts:', state.accounts);
+  console.log('renderAccountChips - activeAccounts after filter:', activeAccounts);
   container.innerHTML = '';
 
   if (activeAccounts.length === 0) {
@@ -561,6 +575,10 @@ function escHtml(str) {
 function populateSelects() {
   const activeAccounts = state.accounts.filter(a => isActiveStatus(a.status));
   const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
+  console.log('populateSelects - state.accounts:', state.accounts);
+  console.log('populateSelects - activeAccounts:', activeAccounts);
+  console.log('populateSelects - state.categories:', state.categories);
+  console.log('populateSelects - activeCategories:', activeCategories);
 
   const accountSelects = ['f-account', 'f-source-account', 'f-dest-account'];
   accountSelects.forEach(id => {
