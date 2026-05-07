@@ -1311,6 +1311,7 @@ function bindEvents() {
 
   document.getElementById('btn-toggle-prev-balance').addEventListener('click', () => {
     state.ui.showPreviousBalance = !state.ui.showPreviousBalance;
+    renderTransactionList();
     renderSummary();
     const btn = document.getElementById('btn-toggle-prev-balance');
     btn.style.opacity = state.ui.showPreviousBalance ? '1' : '0.5';
