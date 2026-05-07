@@ -15,29 +15,13 @@ const MONTHS_PT = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-// =============================================
-// CONFIGURATION (persisted in localStorage)
-// =============================================
-function loadConfig() {
-  const raw = localStorage.getItem('me_config');
-  const defaults = {
-    clientId: '',
-    spreadsheetId: '1Tq1KFbS-0pCw_KmJikH_z57LqQkYlKoS',
-    tabTransactions: 'Transações',
-    tabAccounts: 'Contas',
-    tabCategories: 'Categorias',
-  };
-  if (!raw) return defaults;
-  try {
-    return { ...defaults, ...JSON.parse(raw) };
-  } catch {
-    return defaults;
-  }
-}
-
-function saveConfig(cfg) {
-  localStorage.setItem('me_config', JSON.stringify(cfg));
-}
+const APP_CONFIG = {
+  clientId: '26952004489-ab704ng6jaavo3g4nphtm1d05oddjs6u.apps.googleusercontent.com',
+  spreadsheetId: '1fqlpjC5rJFQwSlxjsL0nXLngBG19aK9ywkWqT_gaId4',
+  tabTransactions: 'Transações',
+  tabAccounts: 'Contas',
+  tabCategories: 'Categorias',
+};
 
 // =============================================
 // STATE
@@ -45,7 +29,7 @@ function saveConfig(cfg) {
 const today = new Date();
 
 const state = {
-  config: loadConfig(),
+  config: APP_CONFIG,
   accessToken: null,
   tokenExpiry: null,
   tokenClient: null,
@@ -1209,50 +1193,11 @@ function signIn() {
 }
 
 // =============================================
-// SETUP
-// =============================================
-function handleSaveSetup() {
-  const clientId = document.getElementById('input-client-id').value.trim();
-  const spreadsheetId = document.getElementById('input-sheet-id').value.trim();
-  const tabTransactions = document.getElementById('input-tab-transactions').value.trim();
-  const tabAccounts = document.getElementById('input-tab-accounts').value.trim();
-  const tabCategories = document.getElementById('input-tab-categories').value.trim();
-
-  if (!clientId) {
-    alert('Informe o Client ID do Google OAuth.');
-    return;
-  }
-  if (!spreadsheetId) {
-    alert('Informe o ID da planilha.');
-    return;
-  }
-
-  state.config = { clientId, spreadsheetId, tabTransactions, tabAccounts, tabCategories };
-  saveConfig(state.config);
-  initAuth();
-  showScreen('auth');
-}
-
-function openSetupScreen() {
-  const { clientId, spreadsheetId, tabTransactions, tabAccounts, tabCategories } = state.config;
-  document.getElementById('input-client-id').value = clientId || '';
-  document.getElementById('input-sheet-id').value = spreadsheetId || '';
-  document.getElementById('input-tab-transactions').value = tabTransactions || 'Transações';
-  document.getElementById('input-tab-accounts').value = tabAccounts || 'Contas';
-  document.getElementById('input-tab-categories').value = tabCategories || 'Categorias';
-  showScreen('setup');
-}
-
-// =============================================
 // EVENT LISTENERS
 // =============================================
 function bindEvents() {
-  // Setup screen
-  document.getElementById('btn-save-setup').addEventListener('click', handleSaveSetup);
-
   // Auth screen
   document.getElementById('btn-signin').addEventListener('click', signIn);
-  document.getElementById('btn-open-setup').addEventListener('click', openSetupScreen);
 
   // Main screen
   document.getElementById('btn-prev-month').addEventListener('click', () => {
@@ -1275,10 +1220,6 @@ function bindEvents() {
 
   document.getElementById('btn-reload').addEventListener('click', () => {
     loadAll('Atualizando dados...');
-  });
-
-  document.getElementById('btn-settings').addEventListener('click', () => {
-    openSetupScreen();
   });
 
   document.getElementById('btn-add').addEventListener('click', () => {
@@ -1372,18 +1313,6 @@ function bindEvents() {
 // =============================================
 function init() {
   bindEvents();
-
-  if (!state.config.clientId) {
-    showScreen('setup');
-    return;
-  }
-
-  // Populate setup form with saved values
-  document.getElementById('input-client-id').value = state.config.clientId;
-  document.getElementById('input-sheet-id').value = state.config.spreadsheetId;
-  document.getElementById('input-tab-transactions').value = state.config.tabTransactions;
-  document.getElementById('input-tab-accounts').value = state.config.tabAccounts;
-  document.getElementById('input-tab-categories').value = state.config.tabCategories;
 
   showScreen('auth');
   initAuth();
