@@ -561,6 +561,7 @@ async function loadAllTransactions() {
 }
 
 async function loadAll(showLoadingMsg = 'Carregando dados...') {
+  const isFirstLoad = state.ui.selectedAccounts.size === 0 && state.accounts.length === 0;
   showLoading(showLoadingMsg);
   try {
     await Promise.all([
@@ -569,6 +570,14 @@ async function loadAll(showLoadingMsg = 'Carregando dados...') {
       loadCategories(),
       loadCategoriesClassified(),
     ]);
+    if (isFirstLoad) {
+      const itau = state.accounts.find(a =>
+        normalizeText(a.name).includes('itau') && isActiveStatus(a.status)
+      );
+      if (itau) {
+        state.ui.selectedAccounts.add(itau.name);
+      }
+    }
     await loadAllTransactions();
     renderApp();
   } finally {
