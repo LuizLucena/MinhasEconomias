@@ -21,6 +21,7 @@ const APP_CONFIG = {
   tabTransactions: 'Transações',
   tabAccounts: 'Contas',
   tabCategories: 'Categorias',
+  tabCategoriesClassified: 'Categorias Classificadas',
 };
 
 // =============================================
@@ -35,6 +36,7 @@ const state = {
   tokenClient: null,
   accounts: [],       // [{ name, total, status }]
   categories: [],     // [{ name, total, status }]
+  categoriesClassified: { roots: {} }, // { roots: { 'Categoria Raiz': { 'Sub1': { 'Sub2': {} } } } }
   transactions: [],   // all loaded transactions [{ rowIndex, date, description, value, category, account }]
   transactionsSheetId: null, // numeric sheetId for batchUpdate
   ui: {
@@ -258,6 +260,56 @@ function findTransferPair(tx, allTx) {
 }
 
 // =============================================
+// UTILITY: Classified categories helpers
+// =============================================
+function getLeafCategories() {
+  // Retorna um array com todas as categorias folha (mais profundas)
+  // Cada item tem: { path: "Raiz->Sub1->Sub2", leaf: "Sub2", root: "Raiz", level: 2 }
+  const result = [];
+  const { roots } = state.categoriesClassified;
+  
+  Object.entries(roots).forEach(([rootName, sub1Obj]) => {
+    if (!sub1Obj || typeof sub1Obj !== 'object') return;
+    
+    Object.entries(sub1Obj).forEach(([sub1Name, sub2Obj]) => {
+      // Se sub2Obj está vazio ou não tem filhos, sub1 é uma folha
+      if (!sub2Obj || Object.keys(sub2Obj).length === 0) {
+        result.push({
+          path: `${rootName}->${sub1Name}`,
+          leaf: sub1Name,
+          root: rootName,
+          level: 1,
+        });
+      } else {
+        // Caso contrário, procura por sub2
+        Object.entries(sub2Obj).forEach(([sub2Name]) => {
+          result.push({
+            path: `${rootName}->${sub1Name}->${sub2Name}`,
+            leaf: sub2Name,
+            root: rootName,
+            level: 2,
+          });
+        });
+      }
+    });
+  });
+  
+  return result;
+}
+
+function getCategoryPathFromLeaf(leafValue) {
+  // Se o valor já é um caminho (contém "->"), retorna como está
+  if (leafValue && leafValue.includes('->')) {
+    return leafValue;
+  }
+  
+  // Caso contrário, procura o caminho completo no formato da árvore
+  const categories = getLeafCategories();
+  const found = categories.find(c => c.leaf === leafValue);
+  return found ? found.path : leafValue;
+}
+
+// =============================================
 // GOOGLE SHEETS API
 // =============================================
 async function apiRequest(url, options = {}) {
@@ -383,6 +435,41 @@ async function loadCategories() {
     .filter(c => c.name);
 }
 
+async function loadCategoriesClassified() {
+  const { tabCategoriesClassified } = state.config;
+  try {
+    const result = await sheetsGet(`${tabCategoriesClassified}!A:C`);
+    const rows = (result.values || []).slice(1);
+    const roots = {};
+    
+    rows.forEach(row => {
+      const rootName = (row[0] || '').trim();
+      const sub1Name = (row[1] || '').trim();
+      const sub2Name = (row[2] || '').trim();
+      
+      if (!rootName) return; // skip empty root
+      
+      if (!roots[rootName]) {
+        roots[rootName] = {};
+      }
+      
+      if (sub1Name && !roots[rootName][sub1Name]) {
+        roots[rootName][sub1Name] = {};
+      }
+      
+      if (sub1Name && sub2Name && !roots[rootName][sub1Name][sub2Name]) {
+        roots[rootName][sub1Name][sub2Name] = {};
+      }
+    });
+    
+    state.categoriesClassified = { roots };
+  } catch (err) {
+    // If Categorias Classificadas doesn't exist, just use empty structure
+    console.warn('Aba Categorias Classificadas não encontrada:', err.message);
+    state.categoriesClassified = { roots: {} };
+  }
+}
+
 async function loadAllTransactions() {
   const { tabTransactions } = state.config;
   const result = await sheetsGet(`${tabTransactions}!A:E`);
@@ -404,6 +491,7 @@ async function loadAll(showLoadingMsg = 'Carregando dados...') {
       loadSpreadsheetMeta(),
       loadAccounts(),
       loadCategories(),
+      loadCategoriesClassified(),
     ]);
     await loadAllTransactions();
     renderApp();
@@ -798,7 +886,6 @@ function escHtml(str) {
 // =============================================
 function populateSelects() {
   const activeAccounts = state.accounts.filter(a => isActiveStatus(a.status));
-  const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
 
   const accountSelects = ['f-account', 'f-source-account', 'f-dest-account'];
   accountSelects.forEach(id => {
@@ -817,13 +904,53 @@ function populateSelects() {
   const catSel = document.getElementById('f-category');
   const currentCat = catSel.value;
   catSel.innerHTML = '<option value="">Selecionar...</option>';
-  activeCategories.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.name;
-    opt.textContent = c.name;
-    catSel.appendChild(opt);
-  });
-  if (currentCat) catSel.value = currentCat;
+
+  // Use classified categories if available
+  const { roots } = state.categoriesClassified;
+  if (roots && Object.keys(roots).length > 0) {
+    // Render hierarchical categories using optgroup
+    Object.entries(roots).forEach(([rootName, sub1Obj]) => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = rootName;
+
+      if (!sub1Obj || typeof sub1Obj !== 'object') return;
+
+      Object.entries(sub1Obj).forEach(([sub1Name, sub2Obj]) => {
+        // If sub2 is empty or has no deeper levels, sub1 is a leaf
+        if (!sub2Obj || Object.keys(sub2Obj).length === 0) {
+          const opt = document.createElement('option');
+          const path = `${rootName}->${sub1Name}`;
+          opt.value = path;
+          opt.textContent = sub1Name;
+          optgroup.appendChild(opt);
+        } else {
+          // Otherwise, add sub2 options
+          Object.entries(sub2Obj).forEach(([sub2Name]) => {
+            const opt = document.createElement('option');
+            const path = `${rootName}->${sub1Name}->${sub2Name}`;
+            opt.value = path;
+            opt.textContent = `${sub1Name} → ${sub2Name}`;
+            optgroup.appendChild(opt);
+          });
+        }
+      });
+
+      catSel.appendChild(optgroup);
+    });
+  } else {
+    // Fallback to legacy categories if classified categories not available
+    const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
+    activeCategories.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.textContent = c.name;
+      catSel.appendChild(opt);
+    });
+  }
+
+  if (currentCat) {
+    catSel.value = currentCat;
+  }
 }
 
 function resetTransactionForm() {
