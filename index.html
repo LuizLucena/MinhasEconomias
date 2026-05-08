@@ -136,9 +136,11 @@
             </div>
             <div class="form-group">
               <label for="f-category">Categoria</label>
-              <select id="f-category" required>
-                <option value="">Selecionar...</option>
-              </select>
+              <input type="hidden" id="f-category" required />
+              <button type="button" id="btn-open-category-picker" class="btn-category-picker">
+                <span id="category-picker-display">Selecionar...</span>
+                <span class="picker-icon">▼</span>
+              </button>
             </div>
           </div>
         </div>
@@ -195,6 +197,48 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ====== CATEGORY PICKER MODAL ====== -->
+  <div id="modal-category-picker" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Selecionar Categoria</h2>
+      </div>
+      <div id="category-picker-content">
+        <!-- Step 1: Root categories -->
+        <div id="step-root" class="picker-step">
+          <div class="picker-label">Passo 1: Categoria</div>
+          <div id="root-options" class="picker-options">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Step 2: Sub1 categories -->
+        <div id="step-sub1" class="picker-step" style="display:none">
+          <div class="picker-label">Passo 2: Subcategoria</div>
+          <div id="sub1-options" class="picker-options">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Step 3: Sub2 categories (if available) -->
+        <div id="step-sub2" class="picker-step" style="display:none">
+          <div class="picker-label">Passo 3: Subcategoria (opcional)</div>
+          <div id="sub2-options" class="picker-options">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-picker-cancel" class="btn btn-secondary">Cancelar</button>
+        <div class="modal-actions-right">
+          <button type="button" id="btn-picker-back" class="btn btn-secondary" style="display:none">Voltar</button>
+          <button type="button" id="btn-picker-ok" class="btn btn-primary">OK</button>
+        </div>
+      </div>
     </div>
   </div>
 

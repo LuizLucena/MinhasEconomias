@@ -50,6 +50,13 @@ const state = {
   pendingInstallmentEdit: null, // { transaction, mode: 'single'|'forward' }
   editingTransaction: null,    // transaction being edited
   editInstallmentMode: null,   // 'single' | 'forward' | null
+  categoryPicker: {
+    selectedRoot: null,
+    selectedSub1: null,
+    selectedSub2: null,
+    currentStep: 1, // 1, 2, or 3
+    hasSub2Options: false,
+  },
 };
 
 // =============================================
@@ -909,54 +916,7 @@ function populateSelects() {
     if (current) sel.value = current;
   });
 
-  const catSel = document.getElementById('f-category');
-  const currentCat = catSel.value;
-  catSel.innerHTML = '<option value="">Selecionar...</option>';
-
-  // Use classified categories if available
-  const { roots } = state.categoriesClassified;
-  if (roots && Object.keys(roots).length > 0) {
-    // Render hierarchical categories using optgroup
-    Object.entries(roots).forEach(([rootName, sub1Obj]) => {
-      const optgroup = document.createElement('optgroup');
-      optgroup.label = rootName;
-
-      if (!sub1Obj || typeof sub1Obj !== 'object') return;
-
-      Object.entries(sub1Obj).forEach(([sub1Name, sub2Obj]) => {
-        // If sub2 is empty or has no deeper levels, sub1 is a leaf
-        if (!sub2Obj || Object.keys(sub2Obj).length === 0) {
-          const opt = document.createElement('option');
-          opt.value = sub1Name;  // Save only the leaf name
-          opt.textContent = sub1Name;
-          optgroup.appendChild(opt);
-        } else {
-          // Otherwise, add sub2 options
-          Object.entries(sub2Obj).forEach(([sub2Name]) => {
-            const opt = document.createElement('option');
-            opt.value = sub2Name;  // Save only the leaf name
-            opt.textContent = `${sub1Name} → ${sub2Name}`;
-            optgroup.appendChild(opt);
-          });
-        }
-      });
-
-      catSel.appendChild(optgroup);
-    });
-  } else {
-    // Fallback to legacy categories if classified categories not available
-    const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
-    activeCategories.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.name;
-      opt.textContent = c.name;
-      catSel.appendChild(opt);
-    });
-  }
-
-  if (currentCat) {
-    catSel.value = currentCat;
-  }
+  updateCategoryDisplay();
 }
 
 function resetTransactionForm() {
@@ -968,6 +928,8 @@ function resetTransactionForm() {
   document.getElementById('installment-fields').style.display = 'none';
   document.getElementById('f-installment-start').value = '1';
   document.getElementById('f-installment-total').value = '12';
+  document.getElementById('f-category').value = 'Sem Categoria';
+  updateCategoryDisplay();
   document.getElementById('form-error').style.display = 'none';
   document.getElementById('btn-delete-transaction').style.display = 'none';
   document.getElementById('desc-count').textContent = '0/30';
@@ -1056,6 +1018,7 @@ function _openEditForm(tx, installmentMode) {
   if (!isTransfer) {
     document.getElementById('f-account').value = tx.account || '';
     document.getElementById('f-category').value = tx.category || '';
+    updateCategoryDisplay();
   }
 
   // Installment fields
@@ -1134,6 +1097,234 @@ function closeTransactionModal() {
   document.getElementById('modal-transaction').style.display = 'none';
   state.editingTransaction = null;
   state.editInstallmentMode = null;
+}
+
+// =============================================
+// CATEGORY PICKER
+// =============================================
+function openCategoryPicker() {
+  // Reset state
+  state.categoryPicker = {
+    selectedRoot: null,
+    selectedSub1: null,
+    selectedSub2: null,
+    currentStep: 1,
+    hasSub2Options: false,
+  };
+  
+  // Show modal and render step 1
+  document.getElementById('modal-category-picker').style.display = 'flex';
+  renderCategoryPickerStep1();
+  updatePickerButtons();
+}
+
+function closeCategoryPicker() {
+  document.getElementById('modal-category-picker').style.display = 'none';
+  state.categoryPicker = {
+    selectedRoot: null,
+    selectedSub1: null,
+    selectedSub2: null,
+    currentStep: 1,
+    hasSub2Options: false,
+  };
+}
+
+function getCategoryPickerRoots() {
+  const { roots } = state.categoriesClassified;
+  if (roots && Object.keys(roots).length > 0) {
+    return roots;
+  }
+
+  const activeCategories = state.categories.filter(c => isActiveStatus(c.status));
+  if (activeCategories.length === 0) {
+    return {};
+  }
+
+  return activeCategories.reduce((acc, c) => {
+    acc['Categorias'] = acc['Categorias'] || {};
+    acc['Categorias'][c.name] = {};
+    return acc;
+  }, {});
+}
+
+function renderCategoryPickerStep1() {
+  const roots = getCategoryPickerRoots();
+  const container = document.getElementById('root-options');
+  container.innerHTML = '';
+
+  // Add "Sem Categoria" option
+  const semCatBtn = document.createElement('div');
+  semCatBtn.className = 'picker-option';
+  semCatBtn.textContent = 'Sem Categoria';
+  semCatBtn.addEventListener('click', () => {
+    document.getElementById('f-category').value = 'Sem Categoria';
+    updateCategoryDisplay();
+    closeCategoryPicker();
+  });
+  container.appendChild(semCatBtn);
+
+  // Add root categories
+  Object.keys(roots).forEach(rootName => {
+    const btn = document.createElement('div');
+    btn.className = `picker-option ${state.categoryPicker.selectedRoot === rootName ? 'selected' : ''}`;
+    btn.textContent = rootName;
+    btn.addEventListener('click', () => {
+      state.categoryPicker.selectedRoot = rootName;
+      state.categoryPicker.selectedSub1 = null;
+      state.categoryPicker.selectedSub2 = null;
+      state.categoryPicker.currentStep = 2;
+      renderCategoryPickerStep2();
+      updatePickerButtons();
+    });
+    container.appendChild(btn);
+  });
+
+  // Show step 1, hide others
+  document.getElementById('step-root').classList.add('active');
+  document.getElementById('step-sub1').classList.remove('active');
+  document.getElementById('step-sub2').classList.remove('active');
+}
+
+function renderCategoryPickerStep2() {
+  const { roots } = state.categoriesClassified;
+  const root = roots[state.categoryPicker.selectedRoot];
+  const container = document.getElementById('sub1-options');
+  container.innerHTML = '';
+
+  if (!root) {
+    renderCategoryPickerStep1();
+    return;
+  }
+
+  Object.entries(root).forEach(([sub1Name, sub2Obj]) => {
+    const btn = document.createElement('div');
+    btn.className = `picker-option ${state.categoryPicker.selectedSub1 === sub1Name ? 'selected' : ''}`;
+    btn.textContent = sub1Name;
+    
+    // Check if has Sub2 options
+    const hasSub2 = sub2Obj && Object.keys(sub2Obj).length > 0;
+    
+    btn.addEventListener('click', () => {
+      state.categoryPicker.selectedSub1 = sub1Name;
+      state.categoryPicker.selectedSub2 = null;
+      
+      if (hasSub2) {
+        state.categoryPicker.currentStep = 3;
+        state.categoryPicker.hasSub2Options = true;
+        renderCategoryPickerStep3();
+      } else {
+        // No sub2, so sub1 is the leaf
+        state.categoryPicker.hasSub2Options = false;
+        document.getElementById('f-category').value = sub1Name;
+        updateCategoryDisplay();
+        closeCategoryPicker();
+      }
+      updatePickerButtons();
+    });
+    container.appendChild(btn);
+  });
+
+  // Show step 2
+  document.getElementById('step-root').classList.remove('active');
+  document.getElementById('step-sub1').classList.add('active');
+  document.getElementById('step-sub2').classList.remove('active');
+}
+
+function renderCategoryPickerStep3() {
+  const { roots } = state.categoriesClassified;
+  const root = roots[state.categoryPicker.selectedRoot];
+  const sub2Obj = root[state.categoryPicker.selectedSub1];
+  const container = document.getElementById('sub2-options');
+  container.innerHTML = '';
+
+  if (!sub2Obj) {
+    renderCategoryPickerStep2();
+    return;
+  }
+
+  Object.keys(sub2Obj).forEach(sub2Name => {
+    const btn = document.createElement('div');
+    btn.className = `picker-option ${state.categoryPicker.selectedSub2 === sub2Name ? 'selected' : ''}`;
+    btn.textContent = sub2Name;
+    btn.addEventListener('click', () => {
+      state.categoryPicker.selectedSub2 = sub2Name;
+      updatePickerButtons();
+    });
+    container.appendChild(btn);
+  });
+
+  // Show step 3
+  document.getElementById('step-root').classList.remove('active');
+  document.getElementById('step-sub1').classList.remove('active');
+  document.getElementById('step-sub2').classList.add('active');
+  document.getElementById('step-sub2').style.display = 'block';
+}
+
+function updatePickerButtons() {
+  const backBtn = document.getElementById('btn-picker-back');
+  const okBtn = document.getElementById('btn-picker-ok');
+  
+  // Show/hide back button based on current step
+  if (state.categoryPicker.currentStep > 1) {
+    backBtn.style.display = 'inline-flex';
+  } else {
+    backBtn.style.display = 'none';
+  }
+  
+  // Enable/disable OK button
+  if (state.categoryPicker.currentStep === 2) {
+    // At step 2, can click OK (sub1 is leaf or will go to step 3)
+    okBtn.disabled = false;
+  } else if (state.categoryPicker.currentStep === 3) {
+    // At step 3, can click OK if sub2 selected
+    okBtn.disabled = !state.categoryPicker.selectedSub2;
+  } else {
+    okBtn.disabled = true;
+  }
+}
+
+function handleCategoryPickerOK() {
+  if (state.categoryPicker.currentStep === 2 && state.categoryPicker.hasSub2Options) {
+    state.categoryPicker.currentStep = 3;
+    renderCategoryPickerStep3();
+    updatePickerButtons();
+    return;
+  }
+  
+  // Finalize selection
+  let selected = '';
+  if (state.categoryPicker.selectedSub2) {
+    selected = state.categoryPicker.selectedSub2;
+  } else if (state.categoryPicker.selectedSub1) {
+    selected = state.categoryPicker.selectedSub1;
+  }
+  
+  if (selected) {
+    document.getElementById('f-category').value = selected;
+    updateCategoryDisplay();
+  }
+  closeCategoryPicker();
+}
+
+function handleCategoryPickerBack() {
+  if (state.categoryPicker.currentStep === 3) {
+    state.categoryPicker.currentStep = 2;
+    state.categoryPicker.selectedSub2 = null;
+    renderCategoryPickerStep2();
+  } else if (state.categoryPicker.currentStep === 2) {
+    state.categoryPicker.currentStep = 1;
+    state.categoryPicker.selectedSub1 = null;
+    renderCategoryPickerStep1();
+  }
+  updatePickerButtons();
+}
+
+function updateCategoryDisplay() {
+  const categoryValue = document.getElementById('f-category').value;
+  const display = document.getElementById('category-picker-display');
+  if (display) {
+    display.textContent = categoryValue ? getCategoryPath(categoryValue) : 'Selecionar...';
+  }
 }
 
 // =============================================
@@ -1661,6 +1852,20 @@ function bindEvents() {
   document.getElementById('btn-cancel-transaction').addEventListener('click', closeTransactionModal);
   document.getElementById('form-transaction').addEventListener('submit', handleSaveTransaction);
   document.getElementById('btn-delete-transaction').addEventListener('click', handleDeleteTransaction);
+
+  // Category picker modal
+  document.getElementById('btn-picker-cancel').addEventListener('click', closeCategoryPicker);
+  document.getElementById('btn-picker-ok').addEventListener('click', handleCategoryPickerOK);
+  document.getElementById('btn-picker-back').addEventListener('click', handleCategoryPickerBack);
+
+  // Category picker button
+  const btnOpenCategoryPicker = document.getElementById('btn-open-category-picker');
+  if (btnOpenCategoryPicker) {
+    btnOpenCategoryPicker.addEventListener('click', (e) => {
+      e.preventDefault();
+      openCategoryPicker();
+    });
+  }
 
   // Type selector
   document.querySelectorAll('.type-btn').forEach(btn => {
