@@ -306,19 +306,42 @@ function getLeafCategories() {
 }
 
 function getCategoryPath(leafValue) {
-  // Encontra o caminho completo de uma folha
+  // Encontra o caminho completo na árvore.
   // Ex: "Academia" -> "Despesas Fixas->Despesas Pessoais->Academia"
+  // Ex: "Despesas Pessoais" -> "Despesas Fixas->Despesas Pessoais"
   if (!leafValue) return leafValue;
   
   // Se já é um caminho (contém "->"), retorna como está
   if (leafValue.includes('->')) {
     return leafValue;
   }
-  
-  // Procura o caminho completo na árvore
-  const categories = getLeafCategories();
-  const found = categories.find(c => c.leaf === leafValue);
-  return found ? found.path : leafValue;
+
+  const target = normalizeText(leafValue);
+  const roots = getCategoryPickerRoots();
+
+  for (const [rootName, sub1Obj] of Object.entries(roots)) {
+    if (normalizeText(rootName) === target) {
+      return rootName;
+    }
+
+    if (!sub1Obj || typeof sub1Obj !== 'object') continue;
+
+    for (const [sub1Name, sub2Obj] of Object.entries(sub1Obj)) {
+      if (normalizeText(sub1Name) === target) {
+        return `${rootName}->${sub1Name}`;
+      }
+
+      if (!sub2Obj || typeof sub2Obj !== 'object') continue;
+
+      for (const sub2Name of Object.keys(sub2Obj)) {
+        if (normalizeText(sub2Name) === target) {
+          return `${rootName}->${sub1Name}->${sub2Name}`;
+        }
+      }
+    }
+  }
+
+  return leafValue;
 }
 
 function findMostRecentCategoryByDescription(description) {
@@ -1234,6 +1257,13 @@ function clearCategoryPickerSearch() {
   }
 }
 
+function hideCategoryPickerSearchResults() {
+  const results = document.getElementById('category-search-results');
+  if (!results) return;
+  results.innerHTML = '';
+  results.style.display = 'none';
+}
+
 function getCategoryPickerSearchEntries() {
   const roots = getCategoryPickerRoots();
   const entries = [
@@ -1314,6 +1344,7 @@ function applyCategoryPickerSearchSelection(entry) {
       return;
     }
 
+    hideCategoryPickerSearchResults();
     renderCategoryPickerStep2();
     updatePickerButtons();
     return;
@@ -1332,6 +1363,7 @@ function applyCategoryPickerSearchSelection(entry) {
       return;
     }
 
+    hideCategoryPickerSearchResults();
     renderCategoryPickerStep3();
     updatePickerButtons();
     return;
@@ -1361,8 +1393,7 @@ function renderCategoryPickerSearchResults(query) {
   const matches = getCategoryPickerSearchEntries()
     .filter(entry => {
       const label = normalizeText(entry.label);
-      const path = normalizeText(entry.path);
-      return label.includes(normalized) || path.includes(normalized);
+      return label.includes(normalized);
     })
     .slice(0, 30);
 
