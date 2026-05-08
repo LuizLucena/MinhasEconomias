@@ -1151,6 +1151,8 @@ function renderCategoryPickerStep1() {
   const roots = getCategoryPickerRoots();
   const container = document.getElementById('root-options');
   container.innerHTML = '';
+  state.categoryPicker.currentStep = 1;
+  state.categoryPicker.hasSub2Options = false;
 
   // Add "Sem Categoria" option
   const semCatBtn = document.createElement('div');
@@ -1169,9 +1171,22 @@ function renderCategoryPickerStep1() {
     btn.className = `picker-option ${state.categoryPicker.selectedRoot === rootName ? 'selected' : ''}`;
     btn.textContent = rootName;
     btn.addEventListener('click', () => {
+      const selectedRootNode = roots[rootName] || {};
+      const hasSub1 = Object.keys(selectedRootNode).length > 0;
+
       state.categoryPicker.selectedRoot = rootName;
       state.categoryPicker.selectedSub1 = null;
       state.categoryPicker.selectedSub2 = null;
+
+      if (!hasSub1) {
+        // Root without children is a valid leaf selection.
+        state.categoryPicker.hasSub2Options = false;
+        document.getElementById('f-category').value = rootName;
+        updateCategoryDisplay();
+        closeCategoryPicker();
+        return;
+      }
+
       state.categoryPicker.currentStep = 2;
       renderCategoryPickerStep2();
       updatePickerButtons();
@@ -1183,6 +1198,7 @@ function renderCategoryPickerStep1() {
   document.getElementById('step-root').classList.add('active');
   document.getElementById('step-sub1').classList.remove('active');
   document.getElementById('step-sub2').classList.remove('active');
+  document.getElementById('step-sub2').style.display = '';
 }
 
 function renderCategoryPickerStep2() {
@@ -1190,6 +1206,8 @@ function renderCategoryPickerStep2() {
   const root = roots[state.categoryPicker.selectedRoot];
   const container = document.getElementById('sub1-options');
   container.innerHTML = '';
+  state.categoryPicker.currentStep = 2;
+  state.categoryPicker.hasSub2Options = false;
 
   if (!root) {
     renderCategoryPickerStep1();
@@ -1207,17 +1225,17 @@ function renderCategoryPickerStep2() {
     btn.addEventListener('click', () => {
       state.categoryPicker.selectedSub1 = sub1Name;
       state.categoryPicker.selectedSub2 = null;
+      state.categoryPicker.hasSub2Options = hasSub2;
       
       if (hasSub2) {
         state.categoryPicker.currentStep = 3;
-        state.categoryPicker.hasSub2Options = true;
         renderCategoryPickerStep3();
       } else {
         // No sub2, so sub1 is the leaf
-        state.categoryPicker.hasSub2Options = false;
         document.getElementById('f-category').value = sub1Name;
         updateCategoryDisplay();
         closeCategoryPicker();
+        return;
       }
       updatePickerButtons();
     });
@@ -1228,6 +1246,7 @@ function renderCategoryPickerStep2() {
   document.getElementById('step-root').classList.remove('active');
   document.getElementById('step-sub1').classList.add('active');
   document.getElementById('step-sub2').classList.remove('active');
+  document.getElementById('step-sub2').style.display = '';
 }
 
 function renderCategoryPickerStep3() {
@@ -1236,6 +1255,7 @@ function renderCategoryPickerStep3() {
   const sub2Obj = root && root[state.categoryPicker.selectedSub1];
   const container = document.getElementById('sub2-options');
   container.innerHTML = '';
+  state.categoryPicker.currentStep = 3;
 
   if (!sub2Obj) {
     renderCategoryPickerStep2();
@@ -1248,6 +1268,7 @@ function renderCategoryPickerStep3() {
     btn.textContent = sub2Name;
     btn.addEventListener('click', () => {
       state.categoryPicker.selectedSub2 = sub2Name;
+      renderCategoryPickerStep3();
       updatePickerButtons();
     });
     container.appendChild(btn);
@@ -1257,7 +1278,7 @@ function renderCategoryPickerStep3() {
   document.getElementById('step-root').classList.remove('active');
   document.getElementById('step-sub1').classList.remove('active');
   document.getElementById('step-sub2').classList.add('active');
-  document.getElementById('step-sub2').style.display = 'block';
+  document.getElementById('step-sub2').style.display = '';
 }
 
 function updatePickerButtons() {
@@ -1273,18 +1294,17 @@ function updatePickerButtons() {
   
   // Enable/disable OK button
   if (state.categoryPicker.currentStep === 2) {
-    // At step 2, can click OK (sub1 is leaf or will go to step 3)
-    okBtn.disabled = false;
+    okBtn.disabled = !state.categoryPicker.selectedSub1;
   } else if (state.categoryPicker.currentStep === 3) {
-    // At step 3, can click OK if sub2 selected
-    okBtn.disabled = !state.categoryPicker.selectedSub2;
+    // Step 3 is optional: allow confirming Sub1 or a selected Sub2.
+    okBtn.disabled = !state.categoryPicker.selectedSub1;
   } else {
     okBtn.disabled = true;
   }
 }
 
 function handleCategoryPickerOK() {
-  if (state.categoryPicker.currentStep === 2 && state.categoryPicker.hasSub2Options) {
+  if (state.categoryPicker.currentStep === 2 && state.categoryPicker.hasSub2Options && state.categoryPicker.selectedSub1) {
     state.categoryPicker.currentStep = 3;
     renderCategoryPickerStep3();
     updatePickerButtons();
