@@ -321,6 +321,47 @@ function getCategoryPath(leafValue) {
   return found ? found.path : leafValue;
 }
 
+function findMostRecentCategoryByDescription(description) {
+  const normalizedDescription = String(description || '').trim().toLowerCase();
+  if (!normalizedDescription) return '';
+
+  let mostRecentMatch = null;
+
+  state.transactions.forEach(tx => {
+    const txDescription = String(tx.description || '').trim().toLowerCase();
+    if (txDescription !== normalizedDescription) return;
+    if (!tx.category || isTransferCategory(tx.category)) return;
+
+    if (!mostRecentMatch) {
+      mostRecentMatch = tx;
+      return;
+    }
+
+    const txDate = parseDate(tx.date);
+    const currentDate = parseDate(mostRecentMatch.date);
+    const txTime = txDate ? txDate.getTime() : -1;
+    const currentTime = currentDate ? currentDate.getTime() : -1;
+
+    if (txTime > currentTime || (txTime === currentTime && tx.rowIndex > mostRecentMatch.rowIndex)) {
+      mostRecentMatch = tx;
+    }
+  });
+
+  return mostRecentMatch ? mostRecentMatch.category : '';
+}
+
+function autoSelectCategoryFromDescription() {
+  if (state.editingTransaction) return;
+  if (getCurrentType() === 'transferencia') return;
+
+  const description = document.getElementById('f-description').value;
+  const matchedCategory = findMostRecentCategoryByDescription(description);
+  if (!matchedCategory) return;
+
+  document.getElementById('f-category').value = matchedCategory;
+  updateCategoryDisplay();
+}
+
 // =============================================
 // GOOGLE SHEETS API
 // =============================================
@@ -2119,6 +2160,10 @@ function bindEvents() {
   // Description char count
   document.getElementById('f-description').addEventListener('input', function () {
     document.getElementById('desc-count').textContent = `${this.value.length}/30`;
+  });
+
+  document.getElementById('f-amount').addEventListener('focus', () => {
+    autoSelectCategoryFromDescription();
   });
 
   // Installment type toggle
