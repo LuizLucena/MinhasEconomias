@@ -572,7 +572,7 @@ async function loadAll(showLoadingMsg = 'Carregando dados...') {
     ]);
     if (isFirstLoad) {
       const itau = state.accounts.find(a =>
-        normalizeText(a.name) === 'itau' && isActiveStatus(a.status)
+        normalizeText(a.name) === 'itau'  && isActiveStatus(a.status)
       );
       if (itau) {
         state.ui.selectedAccounts.add(itau.name);
