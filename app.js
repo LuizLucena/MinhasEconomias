@@ -1167,6 +1167,10 @@ function renderCategoryPickerStep1() {
 
   // Add root categories
   Object.keys(roots).forEach(rootName => {
+    if (rootName === 'Sem Categoria') {
+      return;
+    }
+
     const btn = document.createElement('div');
     btn.className = `picker-option ${state.categoryPicker.selectedRoot === rootName ? 'selected' : ''}`;
     btn.textContent = rootName;
@@ -1268,8 +1272,9 @@ function renderCategoryPickerStep3() {
     btn.textContent = sub2Name;
     btn.addEventListener('click', () => {
       state.categoryPicker.selectedSub2 = sub2Name;
-      renderCategoryPickerStep3();
-      updatePickerButtons();
+      document.getElementById('f-category').value = sub2Name;
+      updateCategoryDisplay();
+      closeCategoryPicker();
     });
     container.appendChild(btn);
   });
