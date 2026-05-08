@@ -297,13 +297,17 @@ function getLeafCategories() {
   return result;
 }
 
-function getCategoryPathFromLeaf(leafValue) {
-  // Se o valor já é um caminho (contém "->"), retorna como está
-  if (leafValue && leafValue.includes('->')) {
+function getCategoryPath(leafValue) {
+  // Encontra o caminho completo de uma folha
+  // Ex: "Academia" -> "Despesas Fixas->Despesas Pessoais->Academia"
+  if (!leafValue) return leafValue;
+  
+  // Se já é um caminho (contém "->"), retorna como está
+  if (leafValue.includes('->')) {
     return leafValue;
   }
   
-  // Caso contrário, procura o caminho completo no formato da árvore
+  // Procura o caminho completo na árvore
   const categories = getLeafCategories();
   const found = categories.find(c => c.leaf === leafValue);
   return found ? found.path : leafValue;
@@ -845,11 +849,15 @@ function renderTransactionItem(tx) {
   const el = document.createElement('div');
   const isIncome = tx.value > 0;
   el.className = `transaction-item ${isIncome ? 'income' : 'expense'}`;
+  
+  // Build category display path
+  const categoryDisplay = tx.category ? escHtml(getCategoryPath(tx.category)) : '';
+  
   el.innerHTML = `
     <div class="transaction-icon">${isIncome ? '↑' : '↓'}</div>
     <div class="transaction-info">
       <div class="transaction-description">${escHtml(tx.description)}</div>
-      <div class="transaction-meta">${escHtml(tx.account)}${tx.category ? ' · ' + escHtml(tx.category) : ''}</div>
+      <div class="transaction-meta">${escHtml(tx.account)}${categoryDisplay ? ' · ' + categoryDisplay : ''}</div>
     </div>
     <div class="transaction-amount">${formatCurrencyShort(tx.value)}</div>
   `;
@@ -919,16 +927,14 @@ function populateSelects() {
         // If sub2 is empty or has no deeper levels, sub1 is a leaf
         if (!sub2Obj || Object.keys(sub2Obj).length === 0) {
           const opt = document.createElement('option');
-          const path = `${rootName}->${sub1Name}`;
-          opt.value = path;
+          opt.value = sub1Name;  // Save only the leaf name
           opt.textContent = sub1Name;
           optgroup.appendChild(opt);
         } else {
           // Otherwise, add sub2 options
           Object.entries(sub2Obj).forEach(([sub2Name]) => {
             const opt = document.createElement('option');
-            const path = `${rootName}->${sub1Name}->${sub2Name}`;
-            opt.value = path;
+            opt.value = sub2Name;  // Save only the leaf name
             opt.textContent = `${sub1Name} → ${sub2Name}`;
             optgroup.appendChild(opt);
           });

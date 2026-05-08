@@ -47,17 +47,38 @@ Exemplo:
 
 ### 2. Ao Editar uma Transação
 
-O campo de categoria mostra o **caminho completo** selecionado:
+O campo de categoria mostra apenas o **nome da subcategoria selecionada** (Academia, Cabeleireiro ou Despesas Pessoais):
 ```
-"Despesas Fixas->Despesas Pessoais->Academia"
+"Academia"
 ```
+
+Mas a exibição completa do caminho aparece em:
+- No modal de edição: "Despesas Fixas→Despesas Pessoais→Academia"
+- Na lista de transações: "Itaú · Despesas Fixas→Despesas Pessoais→Academia"
 
 ### 3. Na Lista de Transações
 
 A categoria é exibida com o **caminho completo** ao lado da conta:
 ```
-Itaú · Despesas Fixas->Despesas Pessoais->Academia
+Itaú · Despesas Fixas→Despesas Pessoais→Academia
 ```
+
+## Como Funciona Internamente
+
+A aplicação utiliza um sistema **inteligente de matching**:
+
+1. **Ao salvar**: Armazena apenas o nome da folha (subcategoria selecionada)
+   - Exemplo: Salva "Academia" em vez de "Despesas Fixas→Despesas Pessoais→Academia"
+
+2. **Ao exibir ou editar**: Busca automaticamente o caminho completo na árvore
+   - Encontra "Academia" → localiza como sendo subcategoria de "Despesas Pessoais" → localiza como sendo subcategoria de "Despesas Fixas"
+   - Exibe: "Despesas Fixas→Despesas Pessoais→Academia"
+
+**Benefícios**:
+- ✅ Sem duplicação de dados no Google Sheets
+- ✅ Permite selecionar "Despesas Pessoais" ou "Academia" indistintamente
+- ✅ Exibição hierárquica automática
+- ✅ Se você renomear a estrutura, os caminhos se atualizam automaticamente
 
 ## Compatibilidade
 
@@ -66,10 +87,10 @@ Se você NÃO criar a aba "Categorias Classificadas":
 - ✅ Usa as categorias simples da aba "Categorias"
 - ✅ Sem categorias em árvore, apenas lista simples
 
-Se você criar a aba e preencher:"
+Se você criar a aba e preencher:
 - ✅ O app usa AUTOMATICAMENTE a nova hierarquia
 - ✅ Antigas transações com categorias simples continuam visíveis
-- ✅ Novas transações salvarão o caminho completo
+- ✅ Novas transações salvarão apenas o nome da folha
 
 ## Dados Salvos no Google Sheets
 
@@ -77,9 +98,10 @@ Quando você cria/edita uma transação, o Google Sheets registra:
 
 | Data | Descrição | Valor | Categoria | Conta |
 |------|---|---|---|---|
-| 15/05/2024 | Academia | -100,00 | Despesas Fixas->Despesas Pessoais->Academia | Itaú |
+| 15/05/2024 | Academia | -100,00 | Academia | Itaú |
+| 16/05/2024 | Supermercado | -150,00 | Despesas Pessoais | Itaú |
 
-O caminho completo com `->` é salvo automaticamente.
+**Apenas a folha** é salva. O caminho completo é **calculado automaticamente** quando você visualiza ou edita.
 
 ## Tips & Tricks
 
@@ -87,6 +109,7 @@ O caminho completo com `->` é salvo automaticamente.
 2. **Evite muitos níveis**: 3 níveis (raiz + 2 subs) é o máximo recomendado
 3. **Seja consistente**: Use nomes similares para facilitar organização
 4. **Sub2 opcional**: Você pode ter categorias com apenas 1 nível de profundidade
+5. **Nomes únicos**: Cada folha (Sub1 ou Sub2) deve ser única na árvore para o matching funcionar
 
 ## Troubleshooting
 
@@ -100,3 +123,8 @@ O caminho completo com `->` é salvo automaticamente.
 
 ### Erro ao salvar categoria
 - Verifique se a categoria selecionada é uma subcategoria válida (nível folha)
+
+### O caminho completo não aparece ao editar
+- O campo de seleção mostra apenas a folha ("Academia"), mas o caminho completo aparece:
+  - No topo do modal: "Despesas Fixas→Despesas Pessoais→Academia"
+  - Na lista de transações: "Itaú · Despesas Fixas→Despesas Pessoais→Academia"
