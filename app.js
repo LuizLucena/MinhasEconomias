@@ -45,6 +45,7 @@ const state = {
     selectedAccounts: new Set(),
     showPreviousBalance: true,   // toggle para exibir saldo anterior
     accountFilterOpen: false,
+    lastNewTransactionDate: formatDateInput(today),
   },
   pendingConfirm: null,        // fn to call on confirm
   pendingInstallmentEdit: null, // { transaction, mode: 'single'|'forward' }
@@ -956,11 +957,42 @@ function setTransactionType(type) {
     if (transferPreviewEl) {
       transferPreviewEl.style.display = 'none';
     }
+    return;
+  }
+
+  const selectedAccounts = Array.from(state.ui.selectedAccounts || []);
+  if (selectedAccounts.length === 1) {
+    const sourceSelect = document.getElementById('f-source-account');
+    const selected = selectedAccounts[0];
+    const exists = Array.from(sourceSelect.options).some(opt => opt.value === selected);
+    if (exists && !sourceSelect.value) {
+      sourceSelect.value = selected;
+    }
   }
 }
 
 function openAddTransaction() {
   resetTransactionForm();
+
+  const selectedAccounts = Array.from(state.ui.selectedAccounts || []);
+  if (selectedAccounts.length === 1) {
+    const selected = selectedAccounts[0];
+
+    const accountSelect = document.getElementById('f-account');
+    const sourceSelect = document.getElementById('f-source-account');
+    const existsInAccount = Array.from(accountSelect.options).some(opt => opt.value === selected);
+    const existsInSource = Array.from(sourceSelect.options).some(opt => opt.value === selected);
+
+    if (existsInAccount) {
+      accountSelect.value = selected;
+    }
+    if (existsInSource) {
+      sourceSelect.value = selected;
+    }
+  }
+
+  document.getElementById('f-date').value = state.ui.lastNewTransactionDate || '';
+
   document.getElementById('modal-transaction-title').textContent = 'Nova Transação';
   document.getElementById('modal-transaction').style.display = 'flex';
 }
@@ -1114,12 +1146,14 @@ function openCategoryPicker() {
   
   // Show modal and render step 1
   document.getElementById('modal-category-picker').style.display = 'flex';
+  clearCategoryPickerSearch();
   renderCategoryPickerStep1();
   updatePickerButtons();
 }
 
 function closeCategoryPicker() {
   document.getElementById('modal-category-picker').style.display = 'none';
+  clearCategoryPickerSearch();
   state.categoryPicker = {
     selectedRoot: null,
     selectedSub1: null,
@@ -1145,6 +1179,179 @@ function getCategoryPickerRoots() {
     acc['Categorias'][c.name] = {};
     return acc;
   }, {});
+}
+
+function clearCategoryPickerSearch() {
+  const input = document.getElementById('category-picker-search');
+  const results = document.getElementById('category-search-results');
+  if (input) {
+    input.value = '';
+  }
+  if (results) {
+    results.innerHTML = '';
+    results.style.display = 'none';
+  }
+}
+
+function getCategoryPickerSearchEntries() {
+  const roots = getCategoryPickerRoots();
+  const entries = [
+    {
+      type: 'none',
+      label: 'Sem Categoria',
+      path: 'Sem Categoria',
+    }
+  ];
+
+  Object.entries(roots).forEach(([rootName, sub1Obj]) => {
+    if (rootName !== 'Sem Categoria') {
+      const hasSub1 = !!sub1Obj && Object.keys(sub1Obj).length > 0;
+      entries.push({
+        type: 'root',
+        label: rootName,
+        path: rootName,
+        root: rootName,
+        hasSub1,
+      });
+    }
+
+    if (!sub1Obj || typeof sub1Obj !== 'object') {
+      return;
+    }
+
+    Object.entries(sub1Obj).forEach(([sub1Name, sub2Obj]) => {
+      const hasSub2 = !!sub2Obj && Object.keys(sub2Obj).length > 0;
+      entries.push({
+        type: 'sub1',
+        label: sub1Name,
+        path: `${rootName} -> ${sub1Name}`,
+        root: rootName,
+        sub1: sub1Name,
+        hasSub2,
+      });
+
+      if (!hasSub2) {
+        return;
+      }
+
+      Object.keys(sub2Obj).forEach(sub2Name => {
+        entries.push({
+          type: 'sub2',
+          label: sub2Name,
+          path: `${rootName} -> ${sub1Name} -> ${sub2Name}`,
+          root: rootName,
+          sub1: sub1Name,
+          sub2: sub2Name,
+        });
+      });
+    });
+  });
+
+  return entries;
+}
+
+function applyCategoryPickerSearchSelection(entry) {
+  if (!entry) return;
+
+  if (entry.type === 'none') {
+    document.getElementById('f-category').value = 'Sem Categoria';
+    updateCategoryDisplay();
+    closeCategoryPicker();
+    return;
+  }
+
+  if (entry.type === 'root') {
+    state.categoryPicker.selectedRoot = entry.root;
+    state.categoryPicker.selectedSub1 = null;
+    state.categoryPicker.selectedSub2 = null;
+    state.categoryPicker.hasSub2Options = false;
+
+    if (!entry.hasSub1) {
+      document.getElementById('f-category').value = entry.root;
+      updateCategoryDisplay();
+      closeCategoryPicker();
+      return;
+    }
+
+    renderCategoryPickerStep2();
+    updatePickerButtons();
+    return;
+  }
+
+  if (entry.type === 'sub1') {
+    state.categoryPicker.selectedRoot = entry.root;
+    state.categoryPicker.selectedSub1 = entry.sub1;
+    state.categoryPicker.selectedSub2 = null;
+    state.categoryPicker.hasSub2Options = entry.hasSub2;
+
+    if (!entry.hasSub2) {
+      document.getElementById('f-category').value = entry.sub1;
+      updateCategoryDisplay();
+      closeCategoryPicker();
+      return;
+    }
+
+    renderCategoryPickerStep3();
+    updatePickerButtons();
+    return;
+  }
+
+  if (entry.type === 'sub2') {
+    state.categoryPicker.selectedRoot = entry.root;
+    state.categoryPicker.selectedSub1 = entry.sub1;
+    state.categoryPicker.selectedSub2 = entry.sub2;
+    document.getElementById('f-category').value = entry.sub2;
+    updateCategoryDisplay();
+    closeCategoryPicker();
+  }
+}
+
+function renderCategoryPickerSearchResults(query) {
+  const results = document.getElementById('category-search-results');
+  if (!results) return;
+
+  const normalized = normalizeText(query);
+  if (!normalized) {
+    results.innerHTML = '';
+    results.style.display = 'none';
+    return;
+  }
+
+  const matches = getCategoryPickerSearchEntries()
+    .filter(entry => {
+      const label = normalizeText(entry.label);
+      const path = normalizeText(entry.path);
+      return label.includes(normalized) || path.includes(normalized);
+    })
+    .slice(0, 30);
+
+  results.innerHTML = '';
+  results.style.display = 'grid';
+
+  if (matches.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'picker-option disabled';
+    empty.textContent = 'Nenhuma categoria encontrada';
+    results.appendChild(empty);
+    return;
+  }
+
+  matches.forEach(entry => {
+    const option = document.createElement('div');
+    option.className = 'picker-option';
+
+    const title = document.createElement('div');
+    title.textContent = entry.label;
+
+    const path = document.createElement('div');
+    path.className = 'picker-search-path';
+    path.textContent = entry.path;
+
+    option.appendChild(title);
+    option.appendChild(path);
+    option.addEventListener('click', () => applyCategoryPickerSearchSelection(entry));
+    results.appendChild(option);
+  });
 }
 
 function renderCategoryPickerStep1() {
@@ -1425,6 +1632,7 @@ async function handleSaveTransaction(e) {
       await handleUpdate(type, desc, amount, dateSheet, installmentType, installX, installY, tabTransactions);
     } else {
       await handleCreate(type, desc, amount, dateSheet, installmentType, installX, installY, tabTransactions);
+      state.ui.lastNewTransactionDate = dateInput;
     }
 
     closeTransactionModal();
@@ -1843,6 +2051,7 @@ function bindEvents() {
     if (month < 1) { month = 12; year--; }
     state.ui.month = month;
     state.ui.year = year;
+    state.ui.lastNewTransactionDate = '';
     renderApp();
   });
 
@@ -1852,6 +2061,7 @@ function bindEvents() {
     if (month > 12) { month = 1; year++; }
     state.ui.month = month;
     state.ui.year = year;
+    state.ui.lastNewTransactionDate = '';
     renderApp();
   });
 
@@ -1882,6 +2092,13 @@ function bindEvents() {
   document.getElementById('btn-picker-cancel').addEventListener('click', closeCategoryPicker);
   document.getElementById('btn-picker-ok').addEventListener('click', handleCategoryPickerOK);
   document.getElementById('btn-picker-back').addEventListener('click', handleCategoryPickerBack);
+
+  const categoryPickerSearchInput = document.getElementById('category-picker-search');
+  if (categoryPickerSearchInput) {
+    categoryPickerSearchInput.addEventListener('input', e => {
+      renderCategoryPickerSearchResults(e.target.value);
+    });
+  }
 
   // Category picker button
   const btnOpenCategoryPicker = document.getElementById('btn-open-category-picker');

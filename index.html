@@ -207,6 +207,17 @@
         <h2>Selecionar Categoria</h2>
       </div>
       <div id="category-picker-content">
+        <div class="picker-search-wrap">
+          <input
+            type="text"
+            id="category-picker-search"
+            class="picker-search-input"
+            placeholder="Pesquisar categoria ou subcategoria..."
+            autocomplete="off"
+          />
+          <div id="category-search-results" class="picker-search-results" style="display:none"></div>
+        </div>
+
         <!-- Step 1: Root categories -->
         <div id="step-root" class="picker-step">
           <div class="picker-label">Passo 1: Categoria</div>

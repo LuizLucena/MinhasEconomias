@@ -1040,6 +1040,39 @@ a {
   letter-spacing: 0.5px;
 }
 
+.picker-search-wrap {
+  margin-bottom: 14px;
+}
+
+.picker-search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.picker-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.picker-search-results {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.picker-search-path {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
 .picker-options {
   display: grid;
   grid-template-columns: 1fr;
