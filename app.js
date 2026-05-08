@@ -1186,7 +1186,7 @@ function renderCategoryPickerStep1() {
 }
 
 function renderCategoryPickerStep2() {
-  const { roots } = state.categoriesClassified;
+  const roots = getCategoryPickerRoots();
   const root = roots[state.categoryPicker.selectedRoot];
   const container = document.getElementById('sub1-options');
   container.innerHTML = '';
@@ -1231,9 +1231,9 @@ function renderCategoryPickerStep2() {
 }
 
 function renderCategoryPickerStep3() {
-  const { roots } = state.categoriesClassified;
+  const roots = getCategoryPickerRoots();
   const root = roots[state.categoryPicker.selectedRoot];
-  const sub2Obj = root[state.categoryPicker.selectedSub1];
+  const sub2Obj = root && root[state.categoryPicker.selectedSub1];
   const container = document.getElementById('sub2-options');
   container.innerHTML = '';
 
