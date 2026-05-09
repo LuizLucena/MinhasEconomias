@@ -1006,6 +1006,7 @@ function resetTransactionForm() {
   updateCategoryDisplay();
   document.getElementById('form-error').style.display = 'none';
   document.getElementById('btn-delete-transaction').style.display = 'none';
+  document.getElementById('btn-save-and-new').style.display = 'inline-flex';
   document.getElementById('desc-count').textContent = '0/30';
   const transferPreviewEl = document.getElementById('transfer-preview');
   if (transferPreviewEl) {
@@ -1103,6 +1104,7 @@ function _openEditForm(tx, installmentMode) {
 
   document.getElementById('modal-transaction-title').textContent = 'Editar Transação';
   document.getElementById('btn-delete-transaction').style.display = 'inline-flex';
+  document.getElementById('btn-save-and-new').style.display = 'none';
 
   const isTransfer = isTransferCategory(tx.category);
   const isIncome = tx.value > 0;
@@ -1167,6 +1169,7 @@ function _openEditTransferForm(source, dest, installmentMode) {
 
   document.getElementById('modal-transaction-title').textContent = 'Editar Transferência';
   document.getElementById('btn-delete-transaction').style.display = 'inline-flex';
+  document.getElementById('btn-save-and-new').style.display = 'none';
 
   setTransactionType('transferencia');
 
@@ -1726,6 +1729,50 @@ async function handleSaveTransaction(e) {
   }
 }
 
+async function handleSaveAndNewTransaction() {
+  const type = getCurrentType();
+  const errorMsg = validateForm(type);
+  const errorEl = document.getElementById('form-error');
+
+  if (errorMsg) {
+    errorEl.textContent = errorMsg;
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+
+  const desc = document.getElementById('f-description').value.trim();
+  const amount = getAmountInputValue();
+  const dateInput = document.getElementById('f-date').value;
+  const dateSheet = inputDateToSheet(dateInput);
+  const installmentType = document.getElementById('f-installment-type').value;
+  const installX = parseInt(document.getElementById('f-installment-start').value, 10);
+  const installY = parseInt(document.getElementById('f-installment-total').value, 10);
+
+  const { tabTransactions } = state.config;
+
+  try {
+    showLoading('Salvando...');
+
+    if (state.editingTransaction) {
+      await handleUpdate(type, desc, amount, dateSheet, installmentType, installX, installY, tabTransactions);
+      closeTransactionModal();
+    } else {
+      await handleCreate(type, desc, amount, dateSheet, installmentType, installX, installY, tabTransactions);
+      state.ui.lastNewTransactionDate = dateInput;
+      // Instead of closing, open new transaction modal
+      openAddTransaction();
+    }
+
+    await loadAll('Atualizando...');
+    showToast('Salvo com sucesso!', 'success');
+  } catch (err) {
+    hideLoading();
+    errorEl.textContent = err.message || 'Erro ao salvar.';
+    errorEl.style.display = 'block';
+  }
+}
+
 async function handleCreate(type, desc, amount, dateSheet, installType, installX, installY, tab) {
   const rows = buildRows(type, desc, amount, dateSheet, installType, installX, installY);
   // Append all rows
@@ -2167,6 +2214,7 @@ function bindEvents() {
   document.getElementById('btn-modal-close').addEventListener('click', closeTransactionModal);
   document.getElementById('btn-cancel-transaction').addEventListener('click', closeTransactionModal);
   document.getElementById('form-transaction').addEventListener('submit', handleSaveTransaction);
+  document.getElementById('btn-save-and-new').addEventListener('click', handleSaveAndNewTransaction);
   document.getElementById('btn-delete-transaction').addEventListener('click', handleDeleteTransaction);
 
   // Category picker modal
