@@ -2246,6 +2246,24 @@ function closeConfirmModal() {
   state.pendingConfirm = null;
 }
 
+function changeMonth(delta) {
+  let { month, year } = state.ui;
+  month += delta;
+
+  if (month < 1) {
+    month = 12;
+    year--;
+  } else if (month > 12) {
+    month = 1;
+    year++;
+  }
+
+  state.ui.month = month;
+  state.ui.year = year;
+  state.ui.lastNewTransactionDate = '';
+  renderApp();
+}
+
 // =============================================
 // AUTH
 // =============================================
@@ -2294,24 +2312,47 @@ function bindEvents() {
 
   // Main screen
   document.getElementById('btn-prev-month').addEventListener('click', () => {
-    let { month, year } = state.ui;
-    month--;
-    if (month < 1) { month = 12; year--; }
-    state.ui.month = month;
-    state.ui.year = year;
-    state.ui.lastNewTransactionDate = '';
-    renderApp();
+    changeMonth(-1);
   });
 
   document.getElementById('btn-next-month').addEventListener('click', () => {
-    let { month, year } = state.ui;
-    month++;
-    if (month > 12) { month = 1; year++; }
-    state.ui.month = month;
-    state.ui.year = year;
-    state.ui.lastNewTransactionDate = '';
-    renderApp();
+    changeMonth(1);
   });
+
+  const mainScreen = document.getElementById('screen-main');
+  if (mainScreen) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    mainScreen.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    mainScreen.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length !== 1) return;
+      if (document.getElementById('modal-transaction').style.display === 'flex') return;
+      if (document.getElementById('modal-category-picker').style.display === 'flex') return;
+      if (document.getElementById('modal-confirm').style.display === 'flex') return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      // Only trigger on deliberate horizontal swipes.
+      if (absX < 50 || absX < absY * 1.2) return;
+
+      if (deltaX < 0) {
+        changeMonth(1);
+      } else {
+        changeMonth(-1);
+      }
+    }, { passive: true });
+  }
 
   document.getElementById('btn-reload').addEventListener('click', () => {
     loadAll('Atualizando dados...');
