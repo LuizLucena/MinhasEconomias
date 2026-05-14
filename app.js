@@ -385,6 +385,120 @@ function autoSelectCategoryFromDescription() {
   updateCategoryDisplay();
 }
 
+function hideDescriptionSuggestions() {
+  const container = document.getElementById('description-suggestions');
+  if (!container) return;
+  container.innerHTML = '';
+  container.style.display = 'none';
+}
+
+function getRecentDescriptionMatches(query) {
+  const normalizedQuery = normalizeText(query);
+  if (normalizedQuery.length < 4) return [];
+
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setMonth(cutoff.getMonth() - 2);
+
+  const sortedRecent = state.transactions
+    .filter(tx => {
+      if (!tx.description || !tx.account || !tx.category) return false;
+      if (isTransferCategory(tx.category)) return false;
+      const txDate = parseDate(tx.date);
+      if (!txDate || txDate < cutoff) return false;
+      return normalizeText(tx.description).includes(normalizedQuery);
+    })
+    .sort((a, b) => {
+      const da = parseDate(a.date);
+      const db = parseDate(b.date);
+      const ta = da ? da.getTime() : -1;
+      const tb = db ? db.getTime() : -1;
+      if (tb !== ta) return tb - ta;
+      return b.rowIndex - a.rowIndex;
+    });
+
+  const unique = [];
+  const seen = new Set();
+  for (const tx of sortedRecent) {
+    const key = `${normalizeText(tx.description)}|${normalizeText(tx.account)}|${normalizeText(tx.category)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(tx);
+    if (unique.length >= 8) break;
+  }
+
+  return unique;
+}
+
+function applyDescriptionSuggestion(tx) {
+  if (!tx) return;
+
+  const descriptionInput = document.getElementById('f-description');
+  descriptionInput.value = tx.description;
+  document.getElementById('desc-count').textContent = `${descriptionInput.value.length}/30`;
+
+  const accountSelect = document.getElementById('f-account');
+  const hasAccount = Array.from(accountSelect.options).some(opt => opt.value === tx.account);
+  if (hasAccount) {
+    accountSelect.value = tx.account;
+  }
+
+  document.getElementById('f-category').value = tx.category;
+  updateCategoryDisplay();
+  hideDescriptionSuggestions();
+}
+
+function renderDescriptionSuggestions(query) {
+  const container = document.getElementById('description-suggestions');
+  if (!container) return;
+
+  if (state.editingTransaction || getCurrentType() === 'transferencia') {
+    hideDescriptionSuggestions();
+    return;
+  }
+
+  const cleanQuery = String(query || '').trim();
+  if (cleanQuery.length < 4) {
+    hideDescriptionSuggestions();
+    return;
+  }
+
+  const matches = getRecentDescriptionMatches(cleanQuery);
+  container.innerHTML = '';
+  container.style.display = 'block';
+
+  if (matches.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'description-suggestion-empty';
+    empty.textContent = 'Nenhuma sugestão nos últimos 2 meses';
+    container.appendChild(empty);
+    return;
+  }
+
+  matches.forEach(tx => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'description-suggestion-option';
+
+    const title = document.createElement('div');
+    title.className = 'description-suggestion-title';
+    title.textContent = tx.description;
+
+    const meta = document.createElement('div');
+    meta.className = 'description-suggestion-meta';
+    meta.textContent = `${tx.account} · ${tx.category} · ${formatDateDisplay(tx.date)}`;
+
+    btn.appendChild(title);
+    btn.appendChild(meta);
+    btn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      applyDescriptionSuggestion(tx);
+    });
+
+    container.appendChild(btn);
+  });
+}
+
 // =============================================
 // GOOGLE SHEETS API
 // =============================================
@@ -1014,6 +1128,7 @@ function resetTransactionForm() {
     transferPreviewEl.textContent = '';
   }
   setTransactionType('despesa');
+  hideDescriptionSuggestions();
   state.editingTransaction = null;
   state.editInstallmentMode = null;
 }
@@ -1025,6 +1140,10 @@ function setTransactionType(type) {
   const isTransfer = type === 'transferencia';
   document.getElementById('fields-normal').style.display = isTransfer ? 'none' : 'block';
   document.getElementById('fields-transfer').style.display = isTransfer ? 'block' : 'none';
+
+  if (isTransfer) {
+    hideDescriptionSuggestions();
+  }
 
   if (!isTransfer) {
     const transferPreviewEl = document.getElementById('transfer-preview');
@@ -1203,6 +1322,7 @@ function _openEditTransferForm(source, dest, installmentMode) {
 
 function closeTransactionModal() {
   document.getElementById('modal-transaction').style.display = 'none';
+  hideDescriptionSuggestions();
   state.editingTransaction = null;
   state.editInstallmentMode = null;
 }
@@ -2248,6 +2368,11 @@ function bindEvents() {
   // Description char count
   document.getElementById('f-description').addEventListener('input', function () {
     document.getElementById('desc-count').textContent = `${this.value.length}/30`;
+    renderDescriptionSuggestions(this.value);
+  });
+
+  document.getElementById('f-description').addEventListener('focus', function () {
+    renderDescriptionSuggestions(this.value);
   });
 
   document.getElementById('f-amount').addEventListener('focus', () => {

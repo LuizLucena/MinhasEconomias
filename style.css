@@ -198,6 +198,54 @@ a {
   float: right;
 }
 
+.description-suggestions {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.description-suggestion-option {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.description-suggestion-option:last-child {
+  border-bottom: none;
+}
+
+.description-suggestion-option:hover {
+  background: #f8fafc;
+}
+
+.description-suggestion-title {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.description-suggestion-meta {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.description-suggestion-empty {
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .form-error {
   background: var(--expense-bg);
   color: var(--expense);
