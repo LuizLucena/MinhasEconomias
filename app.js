@@ -46,6 +46,8 @@ const state = {
     showPreviousBalance: true,   // toggle para exibir saldo anterior
     accountFilterOpen: false,
     lastNewTransactionDate: formatDateInput(today),
+    searchMode: false,           // true quando em modo de pesquisa
+    searchTerm: '',              // termo de busca atual
   },
   pendingConfirm: null,        // fn to call on confirm
   pendingInstallmentEdit: null, // { transaction, mode: 'single'|'forward' }
@@ -703,12 +705,20 @@ async function loadAll(showLoadingMsg = 'Carregando dados...') {
 // FILTERED VIEW
 // =============================================
 function getFilteredTransactions() {
-  const { month, year, selectedAccounts } = state.ui;
+  const { month, year, selectedAccounts, searchMode, searchTerm } = state.ui;
   return state.transactions.filter(t => {
     const d = parseDate(t.date);
     if (!d) return false;
     if (d.getMonth() + 1 !== month || d.getFullYear() !== year) return false;
     if (selectedAccounts.size > 0 && !selectedAccounts.has(t.account)) return false;
+    
+    // Se está em modo de pesquisa, filtra pela descrição
+    if (searchMode && searchTerm.trim()) {
+      const searchNormalized = normalizeText(searchTerm);
+      const descriptionNormalized = normalizeText(t.description);
+      if (!descriptionNormalized.includes(searchNormalized)) return false;
+    }
+    
     return true;
   });
 }
@@ -909,7 +919,7 @@ function renderSummary() {
   const balanceEl = document.getElementById('summary-balance');
   let displayBalance = balance;
   
-  if (state.ui.showPreviousBalance) {
+  if (state.ui.showPreviousBalance && !state.ui.searchMode) {
     const prevBalance = getPreviousBalance();
     displayBalance = prevBalance + balance;
   }
@@ -973,10 +983,11 @@ function renderTransactionList() {
     if (items.length > 0) displayItems.push({ date: dateStr, items });
   });
 
-  let runningBalance = state.ui.showPreviousBalance ? previousBalance : 0;
+  const showOpeningBalance = state.ui.showPreviousBalance && !state.ui.searchMode;
+  let runningBalance = showOpeningBalance ? previousBalance : 0;
 
   container.innerHTML = '';
-  if (state.ui.showPreviousBalance) {
+  if (showOpeningBalance) {
     container.appendChild(renderOpeningBalanceItem(previousBalance));
   }
 
@@ -2302,6 +2313,47 @@ function signIn() {
 }
 
 // =============================================
+// SEARCH
+// =============================================
+function openSearchModal() {
+  document.getElementById('modal-search').style.display = 'flex';
+  const searchInput = document.getElementById('search-input');
+  // Se já está em modo de pesquisa, mostra o termo anterior
+  if (state.ui.searchMode) {
+    searchInput.value = state.ui.searchTerm;
+  } else {
+    searchInput.value = '';
+  }
+  searchInput.focus();
+}
+
+function closeSearchModal() {
+  document.getElementById('modal-search').style.display = 'none';
+  state.ui.searchMode = false;
+  state.ui.searchTerm = '';
+  renderApp();
+}
+
+function performSearch() {
+  const searchInput = document.getElementById('search-input');
+  const term = searchInput.value.trim();
+  
+  if (!term) {
+    showToast('Digite um termo para pesquisar', 'warning');
+    return;
+  }
+  
+  state.ui.searchMode = true;
+  state.ui.searchTerm = term;
+  document.getElementById('modal-search').style.display = 'none';
+  renderApp();
+}
+
+function cancelSearch() {
+  closeSearchModal();
+}
+
+// =============================================
 // EVENT LISTENERS
 // =============================================
 function bindEvents() {
@@ -2365,6 +2417,23 @@ function bindEvents() {
     const btn = document.getElementById('btn-toggle-prev-balance');
     btn.style.opacity = state.ui.showPreviousBalance ? '1' : '0.5';
   });
+
+  document.getElementById('btn-search').addEventListener('click', () => {
+    openSearchModal();
+  });
+
+  // Search modal
+  document.getElementById('btn-search-cancel').addEventListener('click', cancelSearch);
+  document.getElementById('btn-search-submit').addEventListener('click', performSearch);
+  
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        performSearch();
+      }
+    });
+  }
 
   document.getElementById('btn-add').addEventListener('click', () => {
     populateSelects();

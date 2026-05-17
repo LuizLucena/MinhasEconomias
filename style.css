@@ -1188,6 +1188,33 @@ a {
   color: var(--text-secondary);
 }
 
+/* SEARCH MODAL */
+.search-modal-content {
+  margin-bottom: 16px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--card);
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+}
+
 /* =========================================
    RESPONSIVE
 ========================================= */

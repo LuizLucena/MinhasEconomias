@@ -39,6 +39,7 @@
         <span>Minhas Economias</span>
       </div>
       <div class="header-actions">
+        <button id="btn-search" class="icon-btn" title="Pesquisar transações">🔍</button>
         <button id="btn-toggle-prev-balance" class="icon-btn" title="Mostrar/ocultar saldo anterior">∑</button>
         <button id="btn-reload" class="icon-btn" title="Atualizar dados">↻</button>
       </div>
@@ -282,6 +283,30 @@
         <button id="btn-edit-single" class="btn btn-secondary btn-full">Apenas esta parcela</button>
         <button id="btn-edit-forward" class="btn btn-primary btn-full">Esta e todas as parcelas futuras</button>
         <button id="btn-edit-cancel" class="btn btn-link btn-full">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== SEARCH MODAL ====== -->
+  <div id="modal-search" class="modal-overlay" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Pesquisar Transações</h2>
+      </div>
+      <div class="search-modal-content">
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder="Digite um termo para pesquisar..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="modal-actions">
+        <button id="btn-search-cancel" class="btn btn-secondary">Cancelar</button>
+        <div class="modal-actions-right">
+          <button id="btn-search-submit" class="btn btn-primary">Pesquisar</button>
+        </div>
       </div>
     </div>
   </div>
