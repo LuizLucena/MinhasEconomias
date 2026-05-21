@@ -87,6 +87,10 @@ function formatDateInput(dateObj) {
   return `${dateObj.getFullYear()}-${m}-${d}`;
 }
 
+function getMonthStartInput(year, month) {
+  return formatDateInput(new Date(year, month - 1, 1));
+}
+
 function inputDateToSheet(inputVal) {
   // YYYY-MM-DD → DD/MM/YYYY
   if (!inputVal) return '';
@@ -1195,7 +1199,8 @@ function openAddTransaction() {
     }
   }
 
-  document.getElementById('f-date').value = state.ui.lastNewTransactionDate || '';
+  document.getElementById('f-date').value =
+    state.ui.lastNewTransactionDate || getMonthStartInput(state.ui.year, state.ui.month);
 
   document.getElementById('modal-transaction-title').textContent = 'Nova Transação';
   document.getElementById('modal-transaction').style.display = 'flex';
@@ -2271,7 +2276,7 @@ function changeMonth(delta) {
 
   state.ui.month = month;
   state.ui.year = year;
-  state.ui.lastNewTransactionDate = '';
+  state.ui.lastNewTransactionDate = getMonthStartInput(year, month);
   renderApp();
 }
 
