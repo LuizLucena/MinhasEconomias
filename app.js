@@ -2233,7 +2233,9 @@ function showConfirmModal(title, message, onOk, opts = {}) {
   document.getElementById('confirm-message').textContent = message;
 
   const okBtn = document.getElementById('btn-confirm-ok');
+  const cancelBtn = document.getElementById('btn-confirm-cancel');
   okBtn.textContent = opts.okLabel || 'Excluir';
+  cancelBtn.textContent = opts.cancelLabel || 'Cancelar';
 
   // Remove old extra button if any
   const existingExtra = document.getElementById('btn-confirm-extra');
@@ -2414,13 +2416,22 @@ function confirmExitApplication() {
     () => {
       closeConfirmModal();
       state.ui.allowNextBackExit = true;
-      if (window.history && typeof window.history.go === 'function') {
-        window.history.go(-2);
+      if (window.history && typeof window.history.back === 'function') {
+        window.history.back();
+        setTimeout(() => {
+          if (document.visibilityState === 'visible') {
+            try {
+              window.close();
+            } catch (err) {
+              // Browsers may block window.close() for non-script-opened windows.
+            }
+          }
+        }, 250);
       }
     },
     {
-      okText: 'Sair',
-      cancelText: 'Ficar',
+      okLabel: 'Sair',
+      cancelLabel: 'Ficar',
     }
   );
 }
@@ -2657,11 +2668,50 @@ function bindEvents() {
 }
 
 // =============================================
+// PULL TO REFRESH
+// =============================================
+function setupPullToRefresh() {
+  const THRESHOLD = 80;
+  let startY = 0;
+  let isPulling = false;
+  let triggered = false;
+
+  document.addEventListener('touchstart', (e) => {
+    if (!isMainScreenActive()) return;
+    if (e.touches.length !== 1) return;
+    if (window.scrollY > 5) return;
+    startY = e.touches[0].clientY;
+    isPulling = false;
+    triggered = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isMainScreenActive()) return;
+    if (window.scrollY > 5) { isPulling = false; return; }
+    const deltaY = e.touches[0].clientY - startY;
+    if (deltaY <= 0) { isPulling = false; return; }
+    isPulling = true;
+    triggered = deltaY >= THRESHOLD;
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!isPulling) return;
+    const shouldRefresh = triggered;
+    isPulling = false;
+    triggered = false;
+    if (shouldRefresh) {
+      loadAll('Atualizando dados...');
+    }
+  }, { passive: true });
+}
+
+// =============================================
 // INIT
 // =============================================
 function init() {
   bindEvents();
   setupMobileBackBehavior();
+  setupPullToRefresh();
 
   showScreen('auth');
   initAuth();
