@@ -2690,9 +2690,10 @@ function setupPullToRefresh() {
     if (window.scrollY > 5) { isPulling = false; return; }
     const deltaY = e.touches[0].clientY - startY;
     if (deltaY <= 0) { isPulling = false; return; }
+    e.preventDefault();
     isPulling = true;
     triggered = deltaY >= THRESHOLD;
-  }, { passive: true });
+  }, { passive: false });
 
   document.addEventListener('touchend', () => {
     if (!isPulling) return;

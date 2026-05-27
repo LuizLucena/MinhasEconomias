@@ -44,6 +44,10 @@ body {
   overscroll-behavior-y: none;
 }
 
+html {
+  overscroll-behavior-y: none;
+}
+
 a {
   color: var(--primary);
 }
@@ -1246,3 +1250,5 @@ a {
     position: sticky;
   }
 }
+
+
