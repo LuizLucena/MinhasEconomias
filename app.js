@@ -48,6 +48,8 @@ const state = {
     lastNewTransactionDate: formatDateInput(today),
     searchMode: false,           // true quando em modo de pesquisa
     searchTerm: '',              // termo de busca atual
+    backNavInitialized: false,
+    allowNextBackExit: false,
   },
   pendingConfirm: null,        // fn to call on confirm
   pendingInstallmentEdit: null, // { transaction, mode: 'single'|'forward' }
@@ -2358,6 +2360,97 @@ function cancelSearch() {
   closeSearchModal();
 }
 
+function isModalOpen(modalId) {
+  const modal = document.getElementById(modalId);
+  return !!modal && modal.style.display === 'flex';
+}
+
+function isMainScreenActive() {
+  const main = document.getElementById('screen-main');
+  return !!main && main.classList.contains('active');
+}
+
+function pushBackGuardState() {
+  if (!window.history || typeof window.history.pushState !== 'function') return;
+  window.history.pushState({ backGuard: true }, '', window.location.href);
+}
+
+function closeTopModalForBack() {
+  if (isModalOpen('modal-confirm')) {
+    closeConfirmModal();
+    return true;
+  }
+
+  if (isModalOpen('modal-category-picker')) {
+    closeCategoryPicker();
+    return true;
+  }
+
+  if (isModalOpen('modal-installment-edit')) {
+    document.getElementById('modal-installment-edit').style.display = 'none';
+    state.pendingInstallmentEdit = null;
+    return true;
+  }
+
+  if (isModalOpen('modal-search')) {
+    closeSearchModal();
+    return true;
+  }
+
+  if (isModalOpen('modal-transaction')) {
+    closeTransactionModal();
+    return true;
+  }
+
+  return false;
+}
+
+function confirmExitApplication() {
+  if (isModalOpen('modal-confirm')) return;
+
+  showConfirmModal(
+    'Sair do aplicativo?',
+    'Deseja realmente sair do Minhas Economias?',
+    () => {
+      closeConfirmModal();
+      state.ui.allowNextBackExit = true;
+      if (window.history && typeof window.history.go === 'function') {
+        window.history.go(-2);
+      }
+    },
+    {
+      okText: 'Sair',
+      cancelText: 'Ficar',
+    }
+  );
+}
+
+function handleAppBackNavigation() {
+  if (!isMainScreenActive()) return;
+
+  if (state.ui.allowNextBackExit) {
+    state.ui.allowNextBackExit = false;
+    return;
+  }
+
+  if (closeTopModalForBack()) {
+    pushBackGuardState();
+    return;
+  }
+
+  confirmExitApplication();
+  pushBackGuardState();
+}
+
+function setupMobileBackBehavior() {
+  if (state.ui.backNavInitialized) return;
+  if (!window.history || typeof window.history.pushState !== 'function') return;
+
+  state.ui.backNavInitialized = true;
+  pushBackGuardState();
+  window.addEventListener('popstate', handleAppBackNavigation);
+}
+
 // =============================================
 // EVENT LISTENERS
 // =============================================
@@ -2568,6 +2661,7 @@ function bindEvents() {
 // =============================================
 function init() {
   bindEvents();
+  setupMobileBackBehavior();
 
   showScreen('auth');
   initAuth();
