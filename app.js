@@ -2475,6 +2475,10 @@ function escapeCSV(value) {
   return str;
 }
 
+function formatNumberForCSV(value) {
+  return (Math.round(value * 100) / 100).toFixed(2);
+}
+
 function getTransactionType(transaction) {
   if (transaction.value > 0) return 'Receita';
   if (transaction.category && transaction.category.toLowerCase().includes('transfer')) return 'Transferência';
@@ -2498,7 +2502,7 @@ function exportTransactionsToCSV() {
     const row = [
       escapeCSV(t.date),
       escapeCSV(t.description),
-      escapeCSV(formatCurrency(t.value)),
+      escapeCSV(formatNumberForCSV(t.value)),
       escapeCSV(getCategoryPath(t.category)),
       escapeCSV(t.account),
       escapeCSV(getTransactionType(t)),
