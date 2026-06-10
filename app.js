@@ -2463,6 +2463,75 @@ function setupMobileBackBehavior() {
 }
 
 // =============================================
+// EXPORT CSV
+// =============================================
+function escapeCSV(value) {
+  if (!value) return '';
+  const str = String(value);
+  // Se contém vírgula, aspas ou quebra de linha, envolve em aspas
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function getTransactionType(transaction) {
+  if (transaction.value > 0) return 'Receita';
+  if (transaction.category && transaction.category.toLowerCase().includes('transfer')) return 'Transferência';
+  return 'Despesa';
+}
+
+function exportTransactionsToCSV() {
+  const txs = getFilteredTransactions();
+  
+  if (txs.length === 0) {
+    showToast('Nenhuma transação para exportar', 'warning');
+    return;
+  }
+
+  // Cabeçalhos
+  const headers = ['Data', 'Descrição', 'Valor', 'Categoria', 'Conta', 'Tipo'];
+  const rows = [headers.map(escapeCSV).join(',')];
+
+  // Dados
+  txs.forEach(t => {
+    const row = [
+      escapeCSV(t.date),
+      escapeCSV(t.description),
+      escapeCSV(formatCurrency(t.value)),
+      escapeCSV(getCategoryPath(t.category)),
+      escapeCSV(t.account),
+      escapeCSV(getTransactionType(t)),
+    ];
+    rows.push(row.map(escapeCSV).join(','));
+  });
+
+  const csvContent = rows.join('\n');
+  
+  // Adiciona BOM para que Excel leia corretamente com UTF-8
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  // Gera filename com mês/ano
+  const { month, year } = state.ui;
+  const monthStr = String(month).padStart(2, '0');
+  const filename = `transacoes_${year}-${monthStr}.csv`;
+  
+  // Cria link de download
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showToast(`${txs.length} transação(ões) exportada(s)!`, 'success');
+}
+
+// =============================================
 // EVENT LISTENERS
 // =============================================
 function bindEvents() {
@@ -2525,6 +2594,10 @@ function bindEvents() {
     renderSummary();
     const btn = document.getElementById('btn-toggle-prev-balance');
     btn.style.opacity = state.ui.showPreviousBalance ? '1' : '0.5';
+  });
+
+  document.getElementById('btn-export-csv').addEventListener('click', () => {
+    exportTransactionsToCSV();
   });
 
   document.getElementById('btn-search').addEventListener('click', () => {
@@ -2688,8 +2761,14 @@ function setupPullToRefresh() {
   document.addEventListener('touchmove', (e) => {
     if (!isMainScreenActive()) return;
     if (window.scrollY > 5) { isPulling = false; return; }
+    // Do not interfere with modal interactions
+    if (isModalOpen('modal-transaction')) return;
+    if (isModalOpen('modal-confirm')) return;
+    if (isModalOpen('modal-category-picker')) return;
+    if (isModalOpen('modal-installment-edit')) return;
+    if (isModalOpen('modal-search')) return;
     const deltaY = e.touches[0].clientY - startY;
-    if (deltaY <= 0) { isPulling = false; return; }
+    if (deltaY < 10) { isPulling = false; return; }
     e.preventDefault();
     isPulling = true;
     triggered = deltaY >= THRESHOLD;
