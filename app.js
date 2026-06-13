@@ -22,6 +22,7 @@ const APP_CONFIG = {
   tabAccounts: 'Contas',
   tabCategories: 'Categorias',
   tabCategoriesClassified: 'Categorias Classificadas',
+  tabRepetitions: 'Repetições',
 };
 
 // =============================================
@@ -37,6 +38,7 @@ const state = {
   accounts: [],       // [{ name, total, status }]
   categories: [],     // [{ name, total, status }]
   categoriesClassified: { roots: {} }, // { roots: { 'Categoria Raiz': { 'Sub1': { 'Sub2': {} } } } }
+  repetitions: [],    // [{ description, value, category, account, period, start, end }]
   transactions: [],   // all loaded transactions [{ rowIndex, date, description, value, category, account }]
   transactionsSheetId: null, // numeric sheetId for batchUpdate
   ui: {
@@ -108,6 +110,23 @@ function addMonths(dateStr, n) {
   const day = d.getDate().toString().padStart(2, '0');
   const mon = (d.getMonth() + 1).toString().padStart(2, '0');
   return `${day}/${mon}/${d.getFullYear()}`;
+}
+
+function formatDateForSheet(dateObj) {
+  const day = dateObj.getDate().toString().padStart(2, '0');
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+  return `${day}/${month}/${dateObj.getFullYear()}`;
+}
+
+function isFutureMonth(year, month) {
+  const current = new Date();
+  const currentYear = current.getFullYear();
+  const currentMonth = current.getMonth() + 1;
+  return year > currentYear || (year === currentYear && month > currentMonth);
+}
+
+function normalizePeriod(value) {
+  return normalizeText(String(value || ''));
 }
 
 // =============================================
@@ -680,6 +699,104 @@ async function loadAllTransactions() {
     category: (r[3] || '').trim(),
     account: (r[4] || '').trim(),
   })).filter(t => t.date && t.description);
+}
+
+async function loadRepetitions() {
+  const { tabRepetitions } = state.config;
+  try {
+    const result = await sheetsGet(`${tabRepetitions}!A:G`);
+    const rows = (result.values || []).slice(1);
+    state.repetitions = rows
+      .map((r, i) => ({
+        rowIndex: i + 2,
+        description: (r[0] || '').trim(),
+        value: parseValue(r[1]),
+        category: (r[2] || '').trim(),
+        account: (r[3] || '').trim(),
+        period: (r[4] || '').trim(),
+        start: (r[5] || '').trim(),
+        end: (r[6] || '').trim(),
+      }))
+      .filter(r => r.description && r.account);
+  } catch (err) {
+    state.repetitions = [];
+    console.warn('Aba Repetições não encontrada:', err.message);
+  }
+}
+
+function repetitionShouldCreate(repetition, year, month) {
+  const startDate = parseDate(repetition.start);
+  if (!startDate) return false;
+
+  const targetDate = new Date(year, month - 1, startDate.getDate());
+  if (repetition.end) {
+    const endDate = parseDate(repetition.end);
+    if (endDate && targetDate > endDate) return false;
+  }
+
+  const targetKey = year * 100 + month;
+  const startKey = startDate.getFullYear() * 100 + (startDate.getMonth() + 1);
+
+  const period = normalizePeriod(repetition.period);
+  if (period === 'mensal') {
+    return targetKey >= startKey;
+  }
+
+  if (period === 'anual') {
+    return targetDate.getMonth() + 1 === startDate.getMonth() + 1 && targetKey >= startKey;
+  }
+
+  return false;
+}
+
+function repetitionAlreadyExists(repetition, year, month) {
+  const startDate = parseDate(repetition.start);
+  if (!startDate) return true;
+
+  const targetDate = formatDateForSheet(new Date(year, month - 1, startDate.getDate()));
+  const value = Number(repetition.value || 0);
+
+  return state.transactions.some(tx => {
+    if (tx.date !== targetDate) return false;
+    if (normalizeText(tx.description) !== normalizeText(repetition.description)) return false;
+    if (Number(tx.value) !== value) return false;
+    if (normalizeText(tx.category) !== normalizeText(repetition.category)) return false;
+    if (normalizeText(tx.account) !== normalizeText(repetition.account)) return false;
+    return true;
+  });
+}
+
+async function ensureRepetitionsForMonth(year, month) {
+  if (!isFutureMonth(year, month)) return;
+
+  await loadRepetitions();
+
+  const rowsToCreate = state.repetitions.filter(repetition =>
+    repetitionShouldCreate(repetition, year, month) && !repetitionAlreadyExists(repetition, year, month)
+  );
+
+  if (rowsToCreate.length === 0) return;
+
+  showLoading('Criando transações recorrentes...');
+
+  try {
+    const startDate = parseDate(rowsToCreate[0].start);
+    const day = startDate ? startDate.getDate().toString().padStart(2, '0') : '01';
+    const monthLabel = month.toString().padStart(2, '0');
+
+    for (const repetition of rowsToCreate) {
+      const repetitionDate = parseDate(repetition.start);
+      if (!repetitionDate) continue;
+
+      const newDate = `${repetitionDate.getDate().toString().padStart(2, '0')}/${monthLabel}/${year}`;
+      await sheetsAppend(`${state.config.tabTransactions}!A:E`, [[newDate, repetition.description, repetition.value, repetition.category, repetition.account]]);
+    }
+
+    await loadAllTransactions();
+    showToast(`${rowsToCreate.length} transação(ões) recorrente(s) criada(s)!`, 'success');
+  } finally {
+    hideLoading();
+  }
 }
 
 async function loadAll(showLoadingMsg = 'Carregando dados...') {
@@ -2266,7 +2383,7 @@ function closeConfirmModal() {
   state.pendingConfirm = null;
 }
 
-function changeMonth(delta) {
+async function changeMonth(delta) {
   let { month, year } = state.ui;
   month += delta;
 
@@ -2281,6 +2398,8 @@ function changeMonth(delta) {
   state.ui.month = month;
   state.ui.year = year;
   state.ui.lastNewTransactionDate = getMonthStartInput(year, month);
+
+  await ensureRepetitionsForMonth(year, month);
   renderApp();
 }
 
