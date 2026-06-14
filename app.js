@@ -2041,10 +2041,54 @@ async function handleUpdate(type, desc, amount, dateSheet, installType, installX
   const mode = state.editInstallmentMode;
 
   if (editing._isTransferPair) {
+    if (installType === 'monthly' && !parseInstallment(editing.description)) {
+      const rows = buildRecurringRowsForEdit(
+        type,
+        desc,
+        amount,
+        dateSheet,
+        installType,
+        installX,
+        installY,
+        editing.account,
+        editing.category,
+        document.getElementById('f-source-account').value,
+        document.getElementById('f-dest-account').value
+      );
+
+      await sheetsUpdate(`${tab}!A${editing.sourceRow.rowIndex}:E${editing.sourceRow.rowIndex}`, [rows[0]]);
+      await sheetsUpdate(`${tab}!A${editing.destRow.rowIndex}:E${editing.destRow.rowIndex}`, [rows[1]]);
+
+      if (rows.length > 2) {
+        await sheetsAppend(`${tab}!A:E`, rows.slice(2));
+      }
+      return;
+    }
+
     if (editing._installmentMode === 'forward') {
       await updateTransferPairsForward(editing, desc, amount, dateSheet, installType, installX, installY, tab);
     } else {
       await updateTransferPair(editing, desc, amount, dateSheet, installType, installX, installY, tab);
+    }
+    return;
+  }
+
+  if (installType === 'monthly' && !parseInstallment(editing.description)) {
+    const rows = buildRecurringRowsForEdit(
+      type,
+      desc,
+      amount,
+      dateSheet,
+      installType,
+      installX,
+      installY,
+      document.getElementById('f-account').value,
+      document.getElementById('f-category').value
+    );
+
+    await sheetsUpdate(`${tab}!A${editing.rowIndex}:E${editing.rowIndex}`, [rows[0]]);
+    if (rows.length > 1) {
+      await sheetsAppend(`${tab}!A:E`, rows.slice(1));
     }
     return;
   }
