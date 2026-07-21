@@ -2,7 +2,9 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = factory();
   } else {
-    root.buildRecurringRowsForEdit = factory();
+    const api = factory();
+    root.buildRecurringRowsForEdit = api.buildRecurringRowsForEdit;
+    root.getRecurringDateForMonth = api.getRecurringDateForMonth;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   function addMonths(dateStr, n) {

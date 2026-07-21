@@ -789,6 +789,10 @@ async function ensureRepetitionsForMonth(year, month) {
         : `${repetitionDate.getDate().toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
 
       await sheetsAppend(`${state.config.tabTransactions}!A:E`, [[newDate, repetition.description, repetition.value, repetition.category, repetition.account]]);
+
+      if (repetition.rowIndex) {
+        await sheetsUpdate(`${state.config.tabRepetitions}!F${repetition.rowIndex}`, [[newDate]]);
+      }
     }
 
     await loadAllTransactions();
