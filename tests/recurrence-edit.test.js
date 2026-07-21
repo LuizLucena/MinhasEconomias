@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { buildRecurringRowsForEdit } = require('../recurrence');
+const { buildRecurringRowsForEdit, getRecurringDateForMonth } = require('../recurrence');
 
 function run() {
   const rows = buildRecurringRowsForEdit(
@@ -18,6 +18,9 @@ function run() {
   assert.equal(rows[0][1], 'Internet (1 / 3)', 'A primeira parcela deve receber a notação de recorrência');
   assert.equal(rows[1][0], '14/07/2026', 'A segunda parcela deve ser criada para o mês seguinte');
   assert.equal(rows[2][0], '14/08/2026', 'A terceira parcela deve ser criada para o próximo mês');
+
+  assert.equal(getRecurringDateForMonth('14/06/2026', 2026, 7), '14/07/2026', 'Deve avançar para o mês seguinte ao criar uma recorrência em um mês futuro');
+  assert.equal(getRecurringDateForMonth('14/06/2026', 2026, 8), '14/08/2026', 'Deve continuar avançando um mês por vez');
 }
 
 try {

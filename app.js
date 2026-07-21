@@ -780,15 +780,14 @@ async function ensureRepetitionsForMonth(year, month) {
   showLoading('Criando transações recorrentes...');
 
   try {
-    const startDate = parseDate(rowsToCreate[0].start);
-    const day = startDate ? startDate.getDate().toString().padStart(2, '0') : '01';
-    const monthLabel = month.toString().padStart(2, '0');
-
     for (const repetition of rowsToCreate) {
       const repetitionDate = parseDate(repetition.start);
       if (!repetitionDate) continue;
 
-      const newDate = `${repetitionDate.getDate().toString().padStart(2, '0')}/${monthLabel}/${year}`;
+      const newDate = typeof getRecurringDateForMonth === 'function'
+        ? getRecurringDateForMonth(repetition.start, year, month)
+        : `${repetitionDate.getDate().toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+
       await sheetsAppend(`${state.config.tabTransactions}!A:E`, [[newDate, repetition.description, repetition.value, repetition.category, repetition.account]]);
     }
 

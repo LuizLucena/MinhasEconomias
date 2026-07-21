@@ -13,6 +13,12 @@
     return `${day}/${month}/${d.getFullYear()}`;
   }
 
+  function getRecurringDateForMonth(dateStr, year, month) {
+    const baseDate = new Date(dateStr.split('/').reverse().join('-'));
+    const targetDate = new Date(year, month - 1, baseDate.getDate());
+    return `${String(targetDate.getDate()).padStart(2, '0')}/${String(targetDate.getMonth() + 1).padStart(2, '0')}/${targetDate.getFullYear()}`;
+  }
+
   function installmentDescription(base, current, total) {
     return `${base} (${current} / ${total})`;
   }
@@ -46,5 +52,5 @@
     return rows;
   }
 
-  return { buildRecurringRowsForEdit };
+  return { buildRecurringRowsForEdit, getRecurringDateForMonth };
 });
