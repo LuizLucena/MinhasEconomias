@@ -20,10 +20,8 @@
     if (parts.length !== 3) return dateStr;
 
     const day = Number(parts[0]);
-    const baseMonth = Number(parts[1]);
-    const baseYear = Number(parts[2]);
 
-    const targetDate = new Date(baseYear, month - 1, day);
+    const targetDate = new Date(year, month - 1, day);
     if (Number.isNaN(targetDate.getTime())) return dateStr;
 
     return `${String(targetDate.getDate()).padStart(2, '0')}/${String(targetDate.getMonth() + 1).padStart(2, '0')}/${targetDate.getFullYear()}`;

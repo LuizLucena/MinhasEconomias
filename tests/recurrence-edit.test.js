@@ -21,6 +21,7 @@ function run() {
 
   assert.equal(getRecurringDateForMonth('14/06/2026', 2026, 7), '14/07/2026', 'Deve avançar para o mês seguinte ao criar uma recorrência em um mês futuro');
   assert.equal(getRecurringDateForMonth('14/06/2026', 2026, 8), '14/08/2026', 'Deve continuar avançando um mês por vez');
+  assert.equal(getRecurringDateForMonth('14/12/2025', 2026, 1), '14/01/2026', 'Deve respeitar o ano alvo quando a recorrência for criada no próximo ano');
 }
 
 try {
