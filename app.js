@@ -2047,9 +2047,37 @@ async function handleSaveAndNewTransaction() {
 
 async function handleCreate(type, desc, amount, dateSheet, installType, installX, installY, tab) {
   const rows = buildRows(type, desc, amount, dateSheet, installType, installX, installY);
-  // Append all rows
+  // Append the current-month row(s) only. Future installments are created later by the repetition engine.
   for (const row of rows) {
     await sheetsAppend(`${tab}!A:E`, [row]);
+  }
+
+  if (installType === 'monthly') {
+    const repetitionRows = buildMonthlyRepetitionRecords(
+      type,
+      desc,
+      amount,
+      dateSheet,
+      installType,
+      installX,
+      installY,
+      document.getElementById('f-account')?.value || '',
+      document.getElementById('f-category')?.value || 'Transferência',
+      document.getElementById('f-source-account')?.value || '',
+      document.getElementById('f-dest-account')?.value || ''
+    );
+
+    for (const repetition of repetitionRows) {
+      await sheetsAppend(`${state.config.tabRepetitions}!A:G`, [[
+        repetition.description,
+        repetition.value,
+        repetition.category,
+        repetition.account,
+        repetition.period,
+        repetition.start,
+        repetition.end,
+      ]]);
+    }
   }
 }
 
@@ -2223,13 +2251,52 @@ async function updateInstallmentsForward(editing, type, desc, amount, dateSheet,
   }
 }
 
-function buildRows(type, desc, amount, dateSheet, installType, installX, installY) {
+function getFormValue(id, fallback = '') {
+  if (typeof document === 'undefined' || !document.getElementById) {
+    return fallback;
+  }
+  const element = document.getElementById(id);
+  return element ? element.value : fallback;
+}
+
+function buildMonthlyRepetitionRecords(type, desc, amount, dateSheet, installType, installX, installY, account, category, sourceAccount, destAccount) {
+  if (installType !== 'monthly') return [];
+
   const isTransfer = type === 'transferencia';
-  const account = isTransfer ? null : document.getElementById('f-account').value;
-  const category = isTransfer ? 'Transferência' : document.getElementById('f-category').value;
-  const sourceAccount = isTransfer ? document.getElementById('f-source-account').value : null;
-  const destAccount = isTransfer ? document.getElementById('f-dest-account').value : null;
+  const start = dateSheet;
+  const end = addMonths(dateSheet, Math.max(0, installY - installX));
+  const base = {
+    description: desc,
+    category: 'Transferência',
+    account: '',
+    period: 'mensal',
+    start,
+    end,
+  };
+
+  if (isTransfer) {
+    return [
+      { ...base, value: -amount, account: sourceAccount || '' },
+      { ...base, value: amount, account: destAccount || '' },
+    ];
+  }
+
+  return [{
+    ...base,
+    value: type === 'despesa' ? -amount : amount,
+    category: category || 'Transferência',
+    account: account || '',
+  }];
+}
+
+function buildRows(type, desc, amount, dateSheet, installType, installX, installY, options = {}) {
+  const isTransfer = type === 'transferencia';
+  const account = isTransfer ? null : (options.account ?? getFormValue('f-account'));
+  const category = isTransfer ? 'Transferência' : (options.category ?? getFormValue('f-category'));
+  const sourceAccount = isTransfer ? (options.sourceAccount ?? getFormValue('f-source-account')) : null;
+  const destAccount = isTransfer ? (options.destAccount ?? getFormValue('f-dest-account')) : null;
   const sign = type === 'despesa' ? -1 : 1;
+  const includeAllInstallments = options.includeAllInstallments === true;
 
   if (installType !== 'monthly') {
     if (isTransfer) {
@@ -2241,7 +2308,17 @@ function buildRows(type, desc, amount, dateSheet, installType, installX, install
     return [[dateSheet, desc, sign * amount, category, account]];
   }
 
-  // Monthly installments
+  if (!includeAllInstallments) {
+    if (isTransfer) {
+      return [
+        [dateSheet, desc, -amount, 'Transferência', sourceAccount],
+        [dateSheet, desc, amount, 'Transferência', destAccount],
+      ];
+    }
+    return [[dateSheet, desc, sign * amount, category, account]];
+  }
+
+  // Monthly installments (legacy behavior for explicit bulk generation)
   const rows = [];
   for (let i = installX; i <= installY; i++) {
     const installDate = addMonths(dateSheet, i - installX);
@@ -2991,5 +3068,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getMonthKey,
     getPreviousMonthKey,
     isCurrentOrFutureMonth,
+    buildMonthlyRepetitionRecords,
+    buildRows,
   };
 }

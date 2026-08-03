@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { buildRecurringRowsForEdit, getRecurringDateForMonth } = require('../recurrence');
-const { repetitionShouldCreate } = require('../app');
+const { repetitionShouldCreate, buildMonthlyRepetitionRecords, buildRows } = require('../app');
 
 function run() {
   const rows = buildRecurringRowsForEdit(
@@ -37,6 +37,60 @@ function run() {
   assert.equal(repetitionShouldCreate(repetition, 2026, 8), true, 'Deve criar a parcela no mês anterior ao início quando o registro é feito um mês antes do start');
   assert.equal(repetitionShouldCreate(repetition, 2026, 9), true, 'Deve criar a parcela no mês de início');
   assert.equal(repetitionShouldCreate(repetition, 2026, 7), false, 'Não deve criar antes do mês anterior ao início');
+
+  const transferRecords = buildMonthlyRepetitionRecords(
+    'transferencia',
+    'Empréstimo mãe',
+    450,
+    '10/08/2026',
+    'monthly',
+    1,
+    48,
+    'C6 Mãe',
+    'Transferência',
+    'C6 Mãe',
+    'Cofrinho Itaú'
+  );
+
+  assert.equal(transferRecords.length, 2, 'Deve gerar uma repetição para cada lado da transferência');
+  assert.deepEqual(transferRecords[0], {
+    description: 'Empréstimo mãe',
+    value: -450,
+    category: 'Transferência',
+    account: 'C6 Mãe',
+    period: 'mensal',
+    start: '10/08/2026',
+    end: '10/07/2030',
+  }, 'A primeira repetição deve refletir a conta de origem');
+  assert.deepEqual(transferRecords[1], {
+    description: 'Empréstimo mãe',
+    value: 450,
+    category: 'Transferência',
+    account: 'Cofrinho Itaú',
+    period: 'mensal',
+    start: '10/08/2026',
+    end: '10/07/2030',
+  }, 'A segunda repetição deve refletir a conta de destino');
+
+  const initialTransferRows = buildRows(
+    'transferencia',
+    'Empréstimo mãe',
+    450,
+    '10/08/2026',
+    'monthly',
+    1,
+    48,
+    {
+      includeAllInstallments: false,
+      sourceAccount: 'C6 Mãe',
+      destAccount: 'Cofrinho Itaú',
+    }
+  );
+
+  assert.deepEqual(initialTransferRows, [
+    ['10/08/2026', 'Empréstimo mãe', -450, 'Transferência', 'C6 Mãe'],
+    ['10/08/2026', 'Empréstimo mãe', 450, 'Transferência', 'Cofrinho Itaú'],
+  ], 'A criação inicial deve inserir apenas a parcela do mês atual');
 }
 
 try {
