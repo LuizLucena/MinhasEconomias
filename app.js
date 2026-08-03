@@ -2263,7 +2263,7 @@ function buildMonthlyRepetitionRecords(type, desc, amount, dateSheet, installTyp
   if (installType !== 'monthly') return [];
 
   const isTransfer = type === 'transferencia';
-  const start = dateSheet;
+  const start = addMonths(dateSheet, 1);
   const end = addMonths(dateSheet, Math.max(0, installY - installX));
   const base = {
     description: desc,

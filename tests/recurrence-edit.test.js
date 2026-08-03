@@ -59,18 +59,18 @@ function run() {
     category: 'Transferência',
     account: 'C6 Mãe',
     period: 'mensal',
-    start: '10/08/2026',
+    start: '10/09/2026',
     end: '10/07/2030',
-  }, 'A primeira repetição deve refletir a conta de origem');
+  }, 'A primeira repetição deve refletir a conta de origem e começar no mês seguinte');
   assert.deepEqual(transferRecords[1], {
     description: 'Empréstimo mãe',
     value: 450,
     category: 'Transferência',
     account: 'Cofrinho Itaú',
     period: 'mensal',
-    start: '10/08/2026',
+    start: '10/09/2026',
     end: '10/07/2030',
-  }, 'A segunda repetição deve refletir a conta de destino');
+  }, 'A segunda repetição deve refletir a conta de destino e começar no mês seguinte');
 
   const initialTransferRows = buildRows(
     'transferencia',
