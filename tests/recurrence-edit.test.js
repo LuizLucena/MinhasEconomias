@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { buildRecurringRowsForEdit, getRecurringDateForMonth } = require('../recurrence');
+const { repetitionShouldCreate } = require('../app');
 
 function run() {
   const rows = buildRecurringRowsForEdit(
@@ -22,6 +23,20 @@ function run() {
   assert.equal(getRecurringDateForMonth('14/06/2026', 2026, 7), '14/07/2026', 'Deve avançar para o mês seguinte ao criar uma recorrência em um mês futuro');
   assert.equal(getRecurringDateForMonth('14/06/2026', 2026, 8), '14/08/2026', 'Deve continuar avançando um mês por vez');
   assert.equal(getRecurringDateForMonth('14/12/2025', 2026, 1), '14/01/2026', 'Deve respeitar o ano alvo quando a recorrência for criada no próximo ano');
+
+  const repetition = {
+    description: 'Empréstimo mãe',
+    value: -450,
+    category: 'Transferência',
+    account: 'C6 Mãe',
+    period: 'mensal',
+    start: '10/09/2026',
+    end: '10/08/2030',
+  };
+
+  assert.equal(repetitionShouldCreate(repetition, 2026, 8), true, 'Deve criar a parcela no mês anterior ao início quando o registro é feito um mês antes do start');
+  assert.equal(repetitionShouldCreate(repetition, 2026, 9), true, 'Deve criar a parcela no mês de início');
+  assert.equal(repetitionShouldCreate(repetition, 2026, 7), false, 'Não deve criar antes do mês anterior ao início');
 }
 
 try {

@@ -118,11 +118,22 @@ function formatDateForSheet(dateObj) {
   return `${day}/${month}/${dateObj.getFullYear()}`;
 }
 
-function isFutureMonth(year, month) {
+function getMonthKey(year, month) {
+  return year * 100 + month;
+}
+
+function getPreviousMonthKey(year, month) {
+  if (month === 1) {
+    return (year - 1) * 100 + 12;
+  }
+  return year * 100 + (month - 1);
+}
+
+function isCurrentOrFutureMonth(year, month) {
   const current = new Date();
   const currentYear = current.getFullYear();
   const currentMonth = current.getMonth() + 1;
-  return year > currentYear || (year === currentYear && month > currentMonth);
+  return year > currentYear || (year === currentYear && month >= currentMonth);
 }
 
 function normalizePeriod(value) {
@@ -734,12 +745,15 @@ function repetitionShouldCreate(repetition, year, month) {
     if (endDate && targetDate > endDate) return false;
   }
 
-  const targetKey = year * 100 + month;
-  const startKey = startDate.getFullYear() * 100 + (startDate.getMonth() + 1);
+  const targetKey = getMonthKey(year, month);
+  const startKey = getMonthKey(startDate.getFullYear(), startDate.getMonth() + 1);
+  const previousStartKey = getPreviousMonthKey(startDate.getFullYear(), startDate.getMonth() + 1);
 
   const period = normalizePeriod(repetition.period);
   if (period === 'mensal') {
-    return targetKey >= startKey;
+    // Allow the first installment to be created in the registration month
+    // when the series starts in the following month.
+    return targetKey >= startKey || targetKey === previousStartKey;
   }
 
   if (period === 'anual') {
@@ -767,7 +781,7 @@ function repetitionAlreadyExists(repetition, year, month) {
 }
 
 async function ensureRepetitionsForMonth(year, month) {
-  if (!isFutureMonth(year, month)) return;
+  if (!isCurrentOrFutureMonth(year, month)) return;
 
   await loadRepetitions();
 
@@ -2967,4 +2981,15 @@ function init() {
   initAuth();
 }
 
-document.addEventListener('DOMContentLoaded', init);
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', init);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    repetitionShouldCreate,
+    getMonthKey,
+    getPreviousMonthKey,
+    isCurrentOrFutureMonth,
+  };
+}
